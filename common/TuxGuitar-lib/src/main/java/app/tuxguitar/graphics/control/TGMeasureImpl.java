@@ -24,6 +24,7 @@ import app.tuxguitar.song.models.TGMarker;
 import app.tuxguitar.song.models.TGMeasure;
 import app.tuxguitar.song.models.TGMeasureHeader;
 import app.tuxguitar.song.models.TGNote;
+import app.tuxguitar.song.models.TGString;
 import app.tuxguitar.ui.resource.UIColor;
 import app.tuxguitar.ui.resource.UIPainter;
 import app.tuxguitar.ui.resource.UIRectangle;
@@ -663,6 +664,7 @@ public class TGMeasureImpl extends TGMeasure{
 				layout.paintLines(getTrackImpl(), getTs(), bufferPainter, x, y, getWidth(layout) + getSpacing(), measureIsValid);
 				paintTimeSignature(layout, bufferPainter, x, y);
 				paintClef(layout, bufferPainter, x, y);
+				paintTuning(layout, bufferPainter, x, y);
 				paintKeySignature(layout, bufferPainter, x, y);
 				paintComponents(layout, bufferPainter, x, y);
 				paintDivisions(layout,bufferPainter, x, y);
@@ -977,6 +979,31 @@ public class TGMeasureImpl extends TGMeasure{
 				TGClefPainter.paintAlto(painter, x, y,layout.getScoreLineSpacing());
 			}
 			painter.closePath();
+		}
+	}
+
+	private static final String[] TUNING_NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
+	/** Note name of each string, in the clef area of the first measure's tablature (TGLayout.DISPLAY_TUNING). */
+	private void paintTuning(TGLayout layout, UIPainter painter, float fromX, float fromY) {
+		int style = layout.getStyle();
+		if((style & TGLayout.DISPLAY_TUNING) != 0 && (style & TGLayout.DISPLAY_TABLATURE) != 0 && layout.isFirstMeasure(this) && !getTrack().isPercussion()){
+			float x = (fromX + getHeaderImpl().getLeftSpacing(layout));
+			float yTab = (fromY + getTs().getPosition(TGTrackSpacing.POSITION_TABLATURE));
+			UIColor background = layout.getResources().getBackgroundColor();
+			layout.setTextStyle(painter);
+			for(TGString string : getTrack().getStrings()){
+				String name = TUNING_NOTE_NAMES[string.getValue() % 12];
+				float y = (yTab + ((string.getNumber() - 1) * layout.getStringSpacing()));
+				float width = painter.getFMWidth(name);
+				float height = painter.getFMHeight();
+				// clear the staff line behind the name, as for fret numbers
+				painter.setBackground(background);
+				painter.initPath(UIPainter.PATH_FILL);
+				painter.addRectangle(x - 1f, y - (height / 2f), width + 2f, height);
+				painter.closePath();
+				painter.drawString(name, x, y + painter.getFMMiddleLine());
+			}
 		}
 	}
 

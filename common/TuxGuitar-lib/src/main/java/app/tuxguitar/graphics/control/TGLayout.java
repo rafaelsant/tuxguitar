@@ -32,6 +32,8 @@ public abstract class TGLayout {
 	public static final int DISPLAY_MODE_BLACK_WHITE = 0x40;
 	public static final int HIGHLIGHT_PLAYED_BEAT = 0x80;
 	public static final int CONTINUOUS_SCROLL = 0x0100;
+	// paint the note name of each string at the start of the first tablature staff (off by default)
+	public static final int DISPLAY_TUNING = 0x0200;
 
 	private int style;
 	private float scale;
