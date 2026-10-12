@@ -15,6 +15,16 @@ import app.tuxguitar.android.action.impl.track.TGGoToTrackAction
 import app.tuxguitar.android.view.tablature.TGSongViewController
 import app.tuxguitar.document.TGDocumentContextAttributes
 import app.tuxguitar.song.models.TGTrack
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import android.view.Menu
 import android.view.View
 import android.widget.Toast
@@ -117,22 +127,23 @@ private fun MainMenuBar(context: TGContext) {
 		}
 	}
 
-	// no top bar: the status bar (and the notch area) takes the color of the score under it
+	// no top bar: the status bar (and the notch area) takes the color of the score under it; set again when the
+	// screen comes back, since the other screens color it like their own top bar
 	val dark = isSystemInDarkTheme()
-	val scoreColor = if (dark) Color(0xFF121212) else Color.White
-	SideEffect {
-		activity?.let {
-			it.window.statusBarColor = scoreColor.toArgb()
-			(it.findViewById<View>(R.id.root_layout) as? DrawerLayout)?.setStatusBarBackgroundColor(scoreColor.toArgb())
-			WindowCompat.getInsetsController(it.window, it.window.decorView).isAppearanceLightStatusBars = !dark
-		}
+	val lifecycleOwner = LocalLifecycleOwner.current
+	DisposableEffect(lifecycleOwner, dark) {
+		val apply = { activity?.let { colorStatusBar(context, it, dark) } }
+		apply()
+		val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) apply() }
+		lifecycleOwner.lifecycle.addObserver(observer)
+		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
 	}
 
-	// steps aside while the score is scrolled, and comes back shortly after it stops
-	val lastScroll = TGScoreScrollState.lastScrollMillis
+	// steps aside while the score is scrolled (and comes back shortly after it stops) and while the player is open
+	// at its full size; collected in an effect so scrolling does not recompose the bar on every frame
 	var scrolling by remember { mutableStateOf(false) }
-	LaunchedEffect(lastScroll) {
-		if (lastScroll > 0) {
+	LaunchedEffect(Unit) {
+		snapshotFlow { TGScoreScrollState.lastScrollMillis }.drop(1).collectLatest {
 			scrolling = true
 			delay(800)
 			scrolling = false
@@ -140,7 +151,7 @@ private fun MainMenuBar(context: TGContext) {
 	}
 
 	AnimatedVisibility(
-		visible = !scrolling,
+		visible = !scrolling && !TGScoreScrollState.playerExpanded,
 		enter = fadeIn() + slideInVertically { it / 2 },
 		exit = fadeOut() + slideOutVertically { it / 2 },
 	) {
@@ -149,10 +160,11 @@ private fun MainMenuBar(context: TGContext) {
 			color = MaterialTheme.colorScheme.surfaceContainerHigh,
 			tonalElevation = 3.dp,
 			shadowElevation = 6.dp,
-			modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+			// little room below: the player handle stays clearly apart
+			modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
 		) {
 			Row(
-				modifier = Modifier.height(52.dp).padding(horizontal = 4.dp),
+				modifier = Modifier.heightIn(min = 52.dp).padding(horizontal = 4.dp),
 				verticalAlignment = Alignment.CenterVertically,
 			) {
 				IconButton(onClick = { activity?.drawerManager?.openDrawer() }, modifier = Modifier.size(44.dp)) {
@@ -164,7 +176,7 @@ private fun MainMenuBar(context: TGContext) {
 						Icon(painterResource(R.drawable.ic_bar_tuner_24dp), stringResource(R.string.tuner_title))
 					}
 				}
-				ModeSwitcher(TGAppModeController.getInstance(context))
+				ModeMenu(TGAppModeController.getInstance(context))
 				if (activity != null) {
 					OverflowMenu(context, activity, TGAppModeController.getInstance(context).mode)
 				}
@@ -173,7 +185,7 @@ private fun MainMenuBar(context: TGContext) {
 	}
 }
 
-private class TrackOption(val track: TGTrack, val name: String, val selected: Boolean)
+private data class TrackOption(val track: TGTrack, val name: String, val selected: Boolean)
 
 private fun trackOptions(context: TGContext): List<TrackOption> {
 	val song = TGDocumentManager.getInstance(context).song ?: return listOf()
@@ -190,7 +202,11 @@ private fun TrackSelector(context: TGContext, tracks: List<TrackOption>, modifie
 	var expanded by remember { mutableStateOf(false) }
 	val current = tracks.firstOrNull { it.selected }
 	Box(modifier = modifier) {
-		TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+		val description = stringResource(R.string.main_track_description, current?.name ?: "")
+		TextButton(
+			onClick = { expanded = true },
+			modifier = Modifier.fillMaxWidth().semantics { contentDescription = description },
+		) {
 			Text(
 				current?.name ?: "",
 				maxLines = 1,
@@ -218,31 +234,65 @@ private fun TrackSelector(context: TGContext, tracks: List<TrackOption>, modifie
 	}
 }
 
-/** The three modes in a pill; the selected one is filled with the accent container color. */
+private class ModeOption(val mode: TGAppMode, val icon: Int, val label: Int)
+
+private val MODES = listOf(
+	ModeOption(TGAppMode.PLAY, R.drawable.ic_mode_play_white_24dp, R.string.action_mode_play),
+	ModeOption(TGAppMode.PRACTICE, R.drawable.ic_mode_practice_white_24dp, R.string.action_mode_practice),
+	ModeOption(TGAppMode.EDIT, R.drawable.ic_edit_white_24dp, R.string.action_mode_edit),
+)
+
+/**
+ * The current mode as one button; the modes are picked from a menu with their names. Three adjacent icons were too
+ * easy to hit by mistake (changing the mode stops playback) and left no room for the track name.
+ */
 @Composable
-private fun ModeSwitcher(modeController: TGAppModeController) {
-	Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-		Row {
-			ModeButton(modeController, TGAppMode.PLAY, R.drawable.ic_mode_play_white_24dp, R.string.action_mode_play)
-			ModeButton(modeController, TGAppMode.PRACTICE, R.drawable.ic_mode_practice_white_24dp, R.string.action_mode_practice)
-			ModeButton(modeController, TGAppMode.EDIT, R.drawable.ic_edit_white_24dp, R.string.action_mode_edit)
+private fun ModeMenu(modeController: TGAppModeController) {
+	var expanded by remember { mutableStateOf(false) }
+	val current = MODES.first { it.mode == modeController.mode }
+	val description = stringResource(R.string.main_mode_description, stringResource(current.label))
+	Box {
+		Surface(
+			onClick = { expanded = true },
+			shape = CircleShape,
+			color = MaterialTheme.colorScheme.primaryContainer,
+			contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+			modifier = Modifier.height(40.dp).semantics { contentDescription = description },
+		) {
+			Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 10.dp, end = 4.dp)) {
+				Icon(painterResource(current.icon), contentDescription = null, modifier = Modifier.size(22.dp))
+				Icon(painterResource(R.drawable.ic_bar_expand_more_24dp), contentDescription = null, modifier = Modifier.size(20.dp))
+			}
+		}
+		DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+			MODES.forEach { option ->
+				val selected = option.mode == current.mode
+				DropdownMenuItem(
+					text = { Text(stringResource(option.label), fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) },
+					leadingIcon = { Icon(painterResource(option.icon), contentDescription = null) },
+					trailingIcon = if (selected) {
+						{ Icon(painterResource(R.drawable.ic_bar_check_24dp), null, tint = MaterialTheme.colorScheme.primary) }
+					} else null,
+					onClick = {
+						expanded = false
+						modeController.setMode(option.mode)
+					},
+					modifier = Modifier.semantics { this.selected = selected },
+				)
+			}
 		}
 	}
 }
 
-@Composable
-private fun ModeButton(modeController: TGAppModeController, mode: TGAppMode, icon: Int, label: Int) {
-	IconToggleButton(
-		checked = modeController.mode == mode,
-		onCheckedChange = { modeController.setMode(mode) },
-		modifier = Modifier.size(40.dp),
-		colors = IconButtonDefaults.iconToggleButtonColors(
-			checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-			checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-		),
-	) {
-		Icon(painterResource(icon), stringResource(label))
-	}
+/** Status bar in the color of the score background, with icons that stay readable on it. */
+private fun colorStatusBar(context: TGContext, activity: TGActivity, dark: Boolean) {
+	val background = runCatching { TGSongViewController.getInstance(context).styles.backgroundColor }.getOrNull()
+	val color = if (background != null) {
+		android.graphics.Color.rgb(background.red, background.green, background.blue)
+	} else if (dark) 0xFF121212.toInt() else android.graphics.Color.WHITE
+	activity.window.statusBarColor = color
+	(activity.findViewById<View>(R.id.root_layout) as? DrawerLayout)?.setStatusBarBackgroundColor(color)
+	WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = !dark
 }
 
 // ---------------------------------------------------------------- overflow menu

@@ -221,7 +221,9 @@ public class TGSongView extends View {
 			// Solo se ajusta si es necesario
 			// si el alto del compas es mayor al de la pantalla. nunca se puede
 			// ajustar a la medida.
-			if (mY < 0 || ((mY + mHeight) > area.getHeight() && (area.getHeight() >= mHeight + marginHeight || mY > marginHeight))) {
+			// the bottom of the view is covered by the floating menu bar: follow the score above it
+			float visibleHeight = area.getHeight() - this.getBottomSpace();
+			if (mY < 0 || ((mY + mHeight) > visibleHeight && (visibleHeight >= mHeight + marginHeight || mY > marginHeight))) {
 				this.controller.getScroll().getY().setValue((scrollY + mY) - marginHeight);
 				success = true;
 			}

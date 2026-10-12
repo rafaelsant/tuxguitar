@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.tuxguitar.android.R
 import app.tuxguitar.android.view.compose.TGComposeTheme
+import app.tuxguitar.android.view.main.TGScoreScrollState
 import app.tuxguitar.android.view.compose.TGNumberField
 import app.tuxguitar.util.TGContext
 import kotlinx.coroutines.delay
@@ -184,6 +186,11 @@ private fun PracticeBar(
 	var level by rememberSaveable { mutableStateOf(LEVEL_TILES) }
 	val expanded = level == LEVEL_OPTIONS
 	val base = snapshot.baseTempo
+	// the floating menu bar steps aside while the options are open
+	DisposableEffect(expanded) {
+		TGScoreScrollState.playerExpanded = expanded
+		onDispose { TGScoreScrollState.playerExpanded = false }
+	}
 
 	BarSheet(level = level, maxLevel = LEVEL_OPTIONS, onLevelChange = { level = it }) {
 		if (level == LEVEL_MINI) {

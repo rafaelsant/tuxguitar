@@ -180,6 +180,9 @@
 	<string name="channel_list_channels">Channels</string>
 	<string name="channel_list_empty">No instruments yet. Tap + to add one.</string>
 
+	<string name="main_mode_description">Mode: %1$s. Change mode</string>
+	<string name="main_track_description">Track: %1$s. Change track</string>
+
 	<string name="tuner_title">Tuner</string>
 	<string name="tuner_tuning_of">Tuning of %1$s</string>
 	<string name="tuner_standard_tuning">Standard tuning</string>
