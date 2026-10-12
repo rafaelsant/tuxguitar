@@ -142,6 +142,22 @@ private fun SettingsScreen(activity: TGActivity, context: TGContext) {
 			)
 		}
 
+		// navigation log with the screen state after each screen change, for testing on the phone
+		HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+		ListItem(
+			headlineContent = { Text(stringResource(R.string.preferences_debug_log_title)) },
+			supportingContent = { Text(stringResource(R.string.preferences_debug_log_summary)) },
+			modifier = Modifier.clickable {
+				val text = (TGDiagnostics.readReport(activity)?.let { it + "\n\n" } ?: "") + (TGDiagnostics.readLog(activity) ?: "")
+				// the share sheet takes a limited size: the newest part of the log matters
+				val intent = Intent(Intent.ACTION_SEND)
+					.setType("text/plain")
+					.putExtra(Intent.EXTRA_SUBJECT, "TuxGuitar debug log")
+					.putExtra(Intent.EXTRA_TEXT, text.takeLast(90_000))
+				activity.startActivity(Intent.createChooser(intent, null))
+			},
+		)
+
 		// report written by TGDiagnostics after a freeze or a crash, for testing on the phone
 		var hasReport by remember { mutableStateOf(TGDiagnostics.hasReport(activity)) }
 		if (hasReport) {

@@ -184,6 +184,8 @@
 	<string name="main_track_description">Track: %1$s. Change track</string>
 
 	<string name="tuner_title">Tuner</string>
+	<string name="preferences_debug_log_title">Debug log</string>
+	<string name="preferences_debug_log_summary">Share what the app did in the last screen changes with the developer</string>
 	<string name="preferences_diagnostic_title">Freeze or crash report</string>
 	<string name="preferences_diagnostic_summary">Share the report of the last freeze or crash with the developer</string>
 	<string name="preferences_diagnostic_delete">Delete report</string>

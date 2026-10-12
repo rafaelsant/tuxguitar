@@ -7,6 +7,7 @@ import app.tuxguitar.action.TGActionException;
 import app.tuxguitar.android.R;
 import app.tuxguitar.android.action.impl.gui.TGOpenFragmentAction;
 import app.tuxguitar.android.activity.TGActivity;
+import app.tuxguitar.android.application.TGDiagnostics;
 import app.tuxguitar.android.fragment.TGFragmentController;
 import app.tuxguitar.editor.action.TGActionProcessor;
 import app.tuxguitar.event.TGEventListener;
@@ -38,6 +39,13 @@ public class TGNavigationManager {
 	}
 
 	public void processLoadFragment(TGNavigationFragment nf) {
+		final String name = nf.getController().getClass().getSimpleName();
+		TGDiagnostics.log("load fragment " + name + " (history " + this.navigationFragments.size() + ")");
+		this.activity.runOnUiThread(new Runnable() {
+			public void run() {
+				TGNavigationManager.this.activity.dumpStateLater("load " + name);
+			}
+		});
 		FragmentManager fragmentManager = this.activity.getSupportFragmentManager();
 		fragmentManager.beginTransaction().replace(R.id.content_frame, nf.getController().getFragment()).commitAllowingStateLoss();
 

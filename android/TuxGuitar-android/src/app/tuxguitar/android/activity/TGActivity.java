@@ -65,6 +65,10 @@ import app.tuxguitar.util.error.TGErrorManager;
 import app.tuxguitar.util.plugin.TGPluginManager;
 
 import androidx.appcompat.app.ActionBar;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.Fragment;
+import app.tuxguitar.util.error.TGErrorHandler;
+import app.tuxguitar.android.application.TGDiagnostics;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -205,6 +209,7 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 		this.attachInstance();
 		this.createModules();
 		this.setContentView(R.layout.activity_tg);
+		this.registerDiagnostics();
 		this.setLegacyActionBarVisible(false);
 
 		this.registerForContextMenu(findViewById(R.id.root_layout));
@@ -248,6 +253,7 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 
 	@Override
 	public void onBackPressed() {
+		TGDiagnostics.log("back pressed (system)");
 		this.callBackAction();
 	}
 
@@ -311,6 +317,11 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 		TGThreadManager.getInstance(context).setThreadHandler(new TGMultiThreadHandler());
 		TGSynchronizer.getInstance(context).setController(new TGSynchronizerControllerImpl(context));
 		TGErrorManager.getInstance(context).addErrorHandler(new TGErrorHandlerImpl(this));
+		TGErrorManager.getInstance(context).addErrorHandler(new TGErrorHandler() {
+			public void handleError(Throwable throwable) {
+				TGDiagnostics.log("ERROR", throwable);
+			}
+		});
 		TGResourceManager.getInstance(context).setResourceLoader(new TGResourceLoaderImpl(this));
 		TGActionAdapterManager.getInstance(context).initialize(this);
 		TGEditorManager.getInstance(context).setLockControl(new TGLock(context));
@@ -447,6 +458,62 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 			} else {
 				actionBar.hide();
 			}
+		}
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		TGDiagnostics.log("activity resumed");
+	}
+
+	@Override
+	protected void onPause() {
+		TGDiagnostics.log("activity paused");
+		super.onPause();
+	}
+
+	@Override
+	public void onWindowFocusChanged(boolean hasFocus) {
+		super.onWindowFocusChanged(hasFocus);
+		TGDiagnostics.log("window focus " + hasFocus);
+	}
+
+	/** Fragment lifecycle in the debug log (shared from Settings), to follow what happens when screens change. */
+	private void registerDiagnostics() {
+		this.getSupportFragmentManager().registerFragmentLifecycleCallbacks(new FragmentManager.FragmentLifecycleCallbacks() {
+			public void onFragmentViewCreated(FragmentManager fm, Fragment f, View v, Bundle savedInstanceState) {
+				TGDiagnostics.log("fragment view created " + f.getClass().getSimpleName());
+			}
+			public void onFragmentResumed(FragmentManager fm, Fragment f) {
+				TGDiagnostics.log("fragment resumed " + f.getClass().getSimpleName());
+			}
+			public void onFragmentPaused(FragmentManager fm, Fragment f) {
+				TGDiagnostics.log("fragment paused " + f.getClass().getSimpleName());
+			}
+			public void onFragmentViewDestroyed(FragmentManager fm, Fragment f) {
+				TGDiagnostics.log("fragment view destroyed " + f.getClass().getSimpleName());
+			}
+			public void onFragmentDestroyed(FragmentManager fm, Fragment f) {
+				TGDiagnostics.log("fragment destroyed " + f.getClass().getSimpleName());
+			}
+		}, true);
+	}
+
+	/** Writes the screen state to the debug log a little after a screen change, when a broken screen would show. */
+	public void dumpStateLater(final String reason) {
+		final View root = this.findViewById(R.id.root_layout);
+		if( root != null ) {
+			root.postDelayed(new Runnable() {
+				public void run() {
+					TGDiagnostics.dumpState(TGActivity.this, reason + ", after 1.5 s");
+				}
+			}, 1500);
+			root.postDelayed(new Runnable() {
+				public void run() {
+					TGDiagnostics.dumpState(TGActivity.this, reason + ", after 5 s");
+				}
+			}, 5000);
 		}
 	}
 
