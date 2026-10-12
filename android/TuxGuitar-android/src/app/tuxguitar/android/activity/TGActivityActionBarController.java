@@ -2,6 +2,10 @@ package app.tuxguitar.android.activity;
 
 import androidx.appcompat.app.ActionBar;
 
+/**
+ * The old action bar. The theme has none now (the screens draw their own top bars and the main screen a floating
+ * menu bar), so every call is ignored when there is no action bar.
+ */
 public class TGActivityActionBarController {
 
 	private TGActivity activity;
@@ -15,34 +19,50 @@ public class TGActivityActionBarController {
 	}
 
 	public void setHomeButtonEnabled(boolean enabled) {
-		this.getActionBar().setHomeButtonEnabled(enabled);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setHomeButtonEnabled(enabled);
+		}
 	}
 
 	public void setDisplayHomeAsUpEnabled(boolean showHomeAsUp) {
-		this.getActionBar().setDisplayHomeAsUpEnabled(showHomeAsUp);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setDisplayHomeAsUpEnabled(showHomeAsUp);
+		}
 	}
 
 	public void setDisplayShowTitleEnabled(boolean showTitle) {
-		this.getActionBar().setDisplayShowTitleEnabled(showTitle);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setDisplayShowTitleEnabled(showTitle);
+		}
 	}
 
 	public void setDisplayShowHomeEnabled(boolean showHome) {
-		this.getActionBar().setDisplayShowHomeEnabled(showHome);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setDisplayShowHomeEnabled(showHome);
+		}
 	}
 
 	public void setDisplayUseLogoEnabled(boolean useLogo) {
-		this.getActionBar().setDisplayUseLogoEnabled(useLogo);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setDisplayUseLogoEnabled(useLogo);
+		}
 	}
 
 	public void setLogo(int resId) {
-		this.getActionBar().setLogo(resId);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setLogo(resId);
+		}
 	}
 
 	public void setTitle(int resId) {
-		this.getActionBar().setTitle(resId);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setTitle(resId);
+		}
 	}
 
 	public void setTitle(CharSequence title) {
-		this.getActionBar().setTitle(title);
+		if( this.getActionBar() != null ) {
+			this.getActionBar().setTitle(title);
+		}
 	}
 }

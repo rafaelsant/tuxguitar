@@ -1,14 +1,13 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<!-- Overridable theme. -->
-	<style name="AppBaseTheme" parent="Theme.AppCompat.DayNight.DarkActionBar"/>
+	<!-- no action bar: the Compose screens draw their own top bars, the main screen a floating menu bar. A hidden
+	     action bar still reserved its height above the content (an empty band under the status bar). -->
+	<style name="AppBaseTheme" parent="Theme.AppCompat.DayNight.NoActionBar"/>
 	<style name="AppBaseWidget.Spinner" parent="Widget.AppCompat.Spinner.Underlined"/>
 
 	<!-- Application theme. -->
 	<style name="TGTheme" parent="AppBaseTheme">
-		<!-- the old action bar is hidden on the Compose screens (they draw their own top bar); as an overlay it
-		     leaves no empty band when hidden. Screens that still show it pad their top by its height. -->
-		<item name="windowActionBarOverlay">true</item>
 		<!-- ========================================================= -->
 		<!-- ==== COLOR ============================================== -->
 		<!-- ========================================================= -->

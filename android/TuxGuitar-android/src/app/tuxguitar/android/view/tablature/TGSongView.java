@@ -281,8 +281,18 @@ public class TGSongView extends View {
 	protected void onDetachedFromWindow() {
 		super.onDetachedFromWindow();
 
-		this.recycleBuffer();
+		// Drop the buffer without recycle(): the last frame recorded by the renderer still draws it, and when the
+		// screen comes back (the main screen is kept while other screens are shown) a recycled bitmap there stops
+		// the window from presenting new frames: the app keeps running on a frozen picture. The GC frees it.
+		this.bufferedBitmap = null;
 		this.controller.getLayoutPainter().dispose();
+	}
+
+	protected void onAttachedToWindow() {
+		super.onAttachedToWindow();
+
+		// record a new frame with a new buffer
+		this.redraw();
 	}
 
 	public UIPainter createPainter(Canvas canvas) {
