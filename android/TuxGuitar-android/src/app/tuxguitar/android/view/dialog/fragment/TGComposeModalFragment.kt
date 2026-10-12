@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.tuxguitar.android.R
 import app.tuxguitar.android.view.compose.TGComposeTheme
+import app.tuxguitar.android.view.compose.TGScreenTopBar
 
 /**
  * Base of the dialogs drawn with Compose: a full screen with its own top bar (back, title, OK) and the [Content].
@@ -108,27 +109,15 @@ private fun DialogTopBar(
 	onBack: () -> Unit,
 	onOk: () -> Unit,
 ) {
-	Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-		Row(modifier = Modifier.height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-			IconButton(onClick = onBack) {
-				Icon(painterResource(R.drawable.ic_bar_back_24dp), stringResource(R.string.main_menu_back))
+	TGScreenTopBar(title, onBack) {
+		if (secondaryLabel != null) {
+			TextButton(onClick = onSecondary) {
+				Text(secondaryLabel)
 			}
-			Text(
-				title,
-				style = MaterialTheme.typography.titleLarge,
-				maxLines = 1,
-				overflow = TextOverflow.Ellipsis,
-				modifier = Modifier.weight(1f).padding(start = 4.dp),
-			)
-			if (secondaryLabel != null) {
-				TextButton(onClick = onSecondary) {
-					Text(secondaryLabel)
-				}
-			}
-			if (showOk) {
-				TextButton(onClick = onOk, enabled = okEnabled) {
-					Text(stringResource(R.string.global_button_ok), fontWeight = FontWeight.Bold)
-				}
+		}
+		if (showOk) {
+			TextButton(onClick = onOk, enabled = okEnabled) {
+				Text(stringResource(R.string.global_button_ok), fontWeight = FontWeight.Bold)
 			}
 		}
 	}

@@ -175,6 +175,10 @@
 	<string name="action_channel_list_item_edit">Edit</string>
 	<string name="action_channel_list_item_remove">Remove</string>
 	<string name="action_channel_list_item_remove_confirm_question">Are you sure you want to remove this instrument?</string>
+	<string name="channel_list_mute">Mute</string>
+	<string name="channel_list_solo">Solo</string>
+	<string name="channel_list_channels">Channels</string>
+	<string name="channel_list_empty">No instruments yet. Tap + to add one.</string>
 
 	<string name="action_track_tuning_list_item_edit">Edit</string>
 	<string name="action_track_tuning_list_item_remove">Remove</string>
