@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Content is drawn with Jetpack Compose, see TransportModeScreen.kt -->
-<androidx.compose.ui.platform.ComposeView xmlns:android="http://schemas.android.com/apk/res/android"
-	android:id="@+id/transport_mode_dlg_compose"
-	android:layout_width="match_parent"
-	android:layout_height="match_parent" />
