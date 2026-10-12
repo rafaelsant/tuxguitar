@@ -47,7 +47,7 @@ public class TGSongViewLayoutPainter {
 	}
 
 	private void paintArea(UIPainter painter, UIRectangle area) {
-		painter.setBackground(this.controller.getResourceFactory().createColor(255, 255, 255));
+		painter.setBackground(this.controller.getResourceFactory().createColor(this.controller.getStyles().getBackgroundColor()));
 		painter.initPath(UIPainter.PATH_FILL);
 		painter.addRectangle(area.getX(), area.getY(), area.getWidth(), area.getHeight());
 		painter.closePath();

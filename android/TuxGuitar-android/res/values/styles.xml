@@ -1,7 +1,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
 	<!-- Overridable theme. -->
-	<style name="AppBaseTheme" parent="Theme.AppCompat.Light.DarkActionBar"/>
+	<style name="AppBaseTheme" parent="Theme.AppCompat.DayNight.DarkActionBar"/>
 	<style name="AppBaseWidget.Spinner" parent="Widget.AppCompat.Spinner.Underlined"/>
 
 	<!-- Application theme. -->

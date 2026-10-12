@@ -26,6 +26,7 @@
 		<app.tuxguitar.android.view.dialog.bend.TGBendEditor
 			xmlns:android="http://schemas.android.com/apk/res/android"
 			android:id="@+id/bend_dlg_bend_editor"
+			android:background="@android:color/white"
 			android:layout_width="fill_parent"
 			android:layout_height="fill_parent"
 			android:layout_columnSpan="2" />

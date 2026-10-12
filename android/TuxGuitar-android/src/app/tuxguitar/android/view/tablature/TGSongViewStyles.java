@@ -6,7 +6,7 @@ import app.tuxguitar.ui.resource.UIFontModel;
 
 public class TGSongViewStyles extends TGLayoutStyles {
 
-	public TGSongViewStyles() {
+	public TGSongViewStyles(boolean dark) {
 		this.setBufferEnabled(false);
 
 		this.setTrackSpacing(5);
@@ -52,15 +52,32 @@ public class TGSongViewStyles extends TGLayoutStyles {
 		this.setGraceFont( new UIFontModel("sans-serif", 6 , false , false )  );
 		this.setChordFont( new UIFontModel("sans-serif", 8 , false , false )  );
 		this.setChordFretFont( new UIFontModel("sans-serif", 8 , false , false )  );
-		this.setForegroundColor( new UIColorModel(0, 0, 0 ));
-		this.setBackgroundColor( new UIColorModel(255, 255, 255 ));
-		this.setLineColor( new UIColorModel(200,200,200 ));
-		this.setLineColorInvalid( new UIColorModel(205,0,0 ));
-		this.setScoreNoteColor( new UIColorModel(105, 105, 105 ) );
-		this.setTabNoteColor( new UIColorModel(105, 105, 105 ) );
-		this.setPlayNoteColor( new UIColorModel(255, 0, 0 ) );
-		this.setLoopSMarkerColor( new UIColorModel(0, 0, 0 ) );
-		this.setLoopEMarkerColor( new UIColorModel(0, 0, 0 ) );
-		this.setMeasureNumberColor( new UIColorModel(255, 0, 0 ) );
+		if( dark ) {
+			this.setDarkColors();
+		} else {
+			this.setForegroundColor( new UIColorModel(0, 0, 0 ));
+			this.setBackgroundColor( new UIColorModel(255, 255, 255 ));
+			this.setLineColor( new UIColorModel(200,200,200 ));
+			this.setLineColorInvalid( new UIColorModel(205,0,0 ));
+			this.setScoreNoteColor( new UIColorModel(105, 105, 105 ) );
+			this.setTabNoteColor( new UIColorModel(105, 105, 105 ) );
+			this.setPlayNoteColor( new UIColorModel(255, 0, 0 ) );
+			this.setLoopSMarkerColor( new UIColorModel(0, 0, 0 ) );
+			this.setLoopEMarkerColor( new UIColorModel(0, 0, 0 ) );
+			this.setMeasureNumberColor( new UIColorModel(255, 0, 0 ) );
+		}
+	}
+
+	private void setDarkColors() {
+		this.setForegroundColor( new UIColorModel(230, 230, 230 ));
+		this.setBackgroundColor( new UIColorModel(18, 18, 18 ));
+		this.setLineColor( new UIColorModel(85, 85, 85 ));
+		this.setLineColorInvalid( new UIColorModel(239, 83, 80 ));
+		this.setScoreNoteColor( new UIColorModel(225, 225, 225 ) );
+		this.setTabNoteColor( new UIColorModel(225, 225, 225 ) );
+		this.setPlayNoteColor( new UIColorModel(255, 138, 101 ) );
+		this.setLoopSMarkerColor( new UIColorModel(230, 230, 230 ) );
+		this.setLoopEMarkerColor( new UIColorModel(230, 230, 230 ) );
+		this.setMeasureNumberColor( new UIColorModel(77, 182, 172 ) );
 	}
 }

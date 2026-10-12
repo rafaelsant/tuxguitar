@@ -2,6 +2,9 @@ package app.tuxguitar.android.view.tablature;
 
 import java.util.List;
 
+import android.content.res.Configuration;
+import android.content.res.Resources;
+
 import app.tuxguitar.android.graphics.TGResourceFactoryImpl;
 import app.tuxguitar.android.transport.TGTransport;
 import app.tuxguitar.document.TGDocumentManager;
@@ -46,7 +49,7 @@ public class TGSongViewController implements TGController {
 
 	public TGSongViewController(TGContext context) {
 		this.context = context;
-		this.songStyles = new TGSongViewStyles();
+		this.songStyles = new TGSongViewStyles(isDarkMode());
 		this.resourceFactory = new TGResourceFactoryImpl();
 		this.bufferController = new TGSongViewBufferController(this);
 		this.layoutPainter = new TGSongViewLayoutPainter(this);
@@ -143,6 +146,12 @@ public class TGSongViewController implements TGController {
 
 	public TGSongViewLayoutPainter getLayoutPainter() {
 		return layoutPainter;
+	}
+
+	/** Follows the system dark mode; the activity does not restart on change (uiMode in configChanges), so it applies on next launch. */
+	private static boolean isDarkMode() {
+		int nightMode = Resources.getSystem().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+		return (nightMode == Configuration.UI_MODE_NIGHT_YES);
 	}
 
 	public TGLayoutStyles getStyles() {

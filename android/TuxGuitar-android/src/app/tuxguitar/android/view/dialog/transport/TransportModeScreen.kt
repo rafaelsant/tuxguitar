@@ -27,7 +27,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.tuxguitar.android.R
+import app.tuxguitar.android.view.compose.TGComposeTheme
 import kotlinx.coroutines.delay
 
 object TransportModeCompose {
@@ -57,7 +57,7 @@ object TransportModeCompose {
 	@JvmStatic
 	fun bind(view: ComposeView, state: TransportModeState) {
 		view.setContent {
-			MaterialTheme(colorScheme = darkColorScheme()) {
+			TGComposeTheme {
 				Surface(modifier = Modifier.fillMaxSize()) {
 					TransportModeScreen(state)
 				}
