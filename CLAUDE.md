@@ -8,7 +8,7 @@ Usar o TuxGuitar (editor de tablatura open source em Java, LGPL) como app Androi
 - minSdk 24, targetSdk/compileSdk 35, sem product flavors (só debug e release).
 - Saída do debug: `android/build-scripts/tuxguitar-android/apk/build/outputs/apk/debug/*.apk`.
 - `.github/workflows/android-gradle.yml` é do upstream (JDK 21, `assembleRelease` em todo push). **Não alterar**, para evitar conflito ao sincronizar com o upstream.
-- `.github/workflows/android-debug-apk.yml` (deste fork) gera o APK debug: roda em push para branches `android-*` e publica o artefato `tuxguitar-debug-apk` na página da execução no Actions. O APK debug usa chave de debug; se houver outro APK instalado com assinatura diferente, é preciso desinstalá-lo antes.
+- `.github/workflows/android-debug-apk.yml` (deste fork) gera o APK debug: roda em push para branches `android-*` e publica o APK na release `android-latest` (substituída a cada build): https://github.com/rafaelsant/tuxguitar/releases/download/android-latest/tuxguitar-debug.apk. O APK debug usa chave de debug; se houver outro APK instalado com assinatura diferente, é preciso desinstalá-lo antes.
 
 ## Textos e idiomas
 - `android/TuxGuitar-android/res/values/strings.xml` (inglês) é editado à mão.

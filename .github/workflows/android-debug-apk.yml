@@ -6,6 +6,14 @@ on:
   push:
     branches: [ "android-*" ]
 
+# Only the latest push matters: a newer run cancels the one in progress
+concurrency:
+  group: android-debug-apk
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
 jobs:
   build-debug-apk:
     runs-on: ubuntu-latest
@@ -22,10 +30,16 @@ jobs:
         cd android/build-scripts/tuxguitar-android
         chmod +x gradlew
         ./gradlew :apk:assembleDebug
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: tuxguitar-debug-apk
-        path: android/build-scripts/tuxguitar-android/apk/build/outputs/apk/debug/*.apk
-        if-no-files-found: error
-        retention-days: 14
+    # A single prerelease, replaced on every build, keeps only the latest APK at a fixed URL:
+    # https://github.com/<owner>/<repo>/releases/download/android-latest/tuxguitar-debug.apk
+    - name: Publish APK as the android-latest release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        cp android/build-scripts/tuxguitar-android/apk/build/outputs/apk/debug/*.apk tuxguitar-debug.apk
+        gh release delete android-latest --cleanup-tag --yes || true
+        gh release create android-latest tuxguitar-debug.apk \
+          --prerelease \
+          --target "$GITHUB_SHA" \
+          --title "Android debug APK (latest)" \
+          --notes "Built from ${GITHUB_REF_NAME} at ${GITHUB_SHA}. Replaced on every build."
