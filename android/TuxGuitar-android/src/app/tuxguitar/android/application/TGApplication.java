@@ -11,6 +11,14 @@ public class TGApplication extends MultiDexApplication {
 		super();
 	}
 
+	@Override
+	public void onCreate() {
+		super.onCreate();
+
+		// freeze and crash reports, shared from Settings
+		TGDiagnostics.start(this);
+	}
+
 	protected void attachBaseContext(Context base) {
 		super.attachBaseContext(base);
 

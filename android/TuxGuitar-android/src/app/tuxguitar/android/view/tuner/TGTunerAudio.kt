@@ -60,15 +60,11 @@ class TGTunerAudio(private val context: Context, private val onPitch: (Float) ->
 		thread = null
 	}
 
-	/** Unprocessed audio when the device has it: noise suppression and gain control distort the pitch. */
-	private fun audioSource(): Int {
-		val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-		return if (audioManager.getProperty(AudioManager.PROPERTY_SUPPORT_AUDIO_SOURCE_UNPROCESSED) == "true") {
-			MediaRecorder.AudioSource.UNPROCESSED
-		} else {
-			MediaRecorder.AudioSource.VOICE_RECOGNITION
-		}
-	}
+	/**
+	 * Voice recognition: the usual source for tuners, without noise suppression and gain control (they distort the
+	 * pitch) and without the special routing of the unprocessed source, which some devices handle badly.
+	 */
+	private fun audioSource(): Int = MediaRecorder.AudioSource.VOICE_RECOGNITION
 
 	private fun loop(record: AudioRecord) {
 		val detector = TGPitchDetector(SAMPLE_RATE, MIN_FREQUENCY, MAX_FREQUENCY, MIN_RMS)

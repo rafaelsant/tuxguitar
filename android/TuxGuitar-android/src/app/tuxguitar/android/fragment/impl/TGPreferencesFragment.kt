@@ -22,6 +22,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.TextButton
+import app.tuxguitar.android.application.TGDiagnostics
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -138,6 +140,33 @@ private fun SettingsScreen(activity: TGActivity, context: TGContext) {
 				stringResource(R.string.preferences_midi_output_port_summary_empty),
 				modifier = Modifier.padding(horizontal = 16.dp),
 			)
+		}
+
+		// report written by TGDiagnostics after a freeze or a crash, for testing on the phone
+		var hasReport by remember { mutableStateOf(TGDiagnostics.hasReport(activity)) }
+		if (hasReport) {
+			HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+			ListItem(
+				headlineContent = { Text(stringResource(R.string.preferences_diagnostic_title)) },
+				supportingContent = { Text(stringResource(R.string.preferences_diagnostic_summary)) },
+				modifier = Modifier.clickable {
+					val report = TGDiagnostics.readReport(activity) ?: return@clickable
+					val intent = Intent(Intent.ACTION_SEND)
+						.setType("text/plain")
+						.putExtra(Intent.EXTRA_SUBJECT, "TuxGuitar diagnostic report")
+						.putExtra(Intent.EXTRA_TEXT, report)
+					activity.startActivity(Intent.createChooser(intent, null))
+				},
+			)
+			TextButton(
+				onClick = {
+					TGDiagnostics.deleteReport(activity)
+					hasReport = false
+				},
+				modifier = Modifier.padding(horizontal = 8.dp),
+			) {
+				Text(stringResource(R.string.preferences_diagnostic_delete))
+			}
 		}
 	}
 }

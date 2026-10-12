@@ -184,6 +184,9 @@
 	<string name="main_track_description">Track: %1$s. Change track</string>
 
 	<string name="tuner_title">Tuner</string>
+	<string name="preferences_diagnostic_title">Freeze or crash report</string>
+	<string name="preferences_diagnostic_summary">Share the report of the last freeze or crash with the developer</string>
+	<string name="preferences_diagnostic_delete">Delete report</string>
 	<string name="tuner_tuning_of">Tuning of %1$s</string>
 	<string name="tuner_standard_tuning">Standard tuning</string>
 	<string name="tuner_play_string">Play a string</string>
