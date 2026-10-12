@@ -516,7 +516,7 @@
 	<string name="practice_count_in">Count-in</string>
 	<string name="practice_expand">More options</string>
 	<string name="practice_collapse">Fewer options</string>
-	<string name="practice_bpm">%1$d BPM</string>
+	<string name="practice_bpm_unit">BPM</string>
 	<string name="practice_bpm_label">Speed (BPM)</string>
 	<string name="practice_fixed_summary">%1$d%% of the original speed</string>
 	<string name="practice_training_progress">%1$d → %2$d BPM · loop %3$d of %4$d</string>

@@ -1,6 +1,20 @@
 package app.tuxguitar.android.view.practice
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -124,23 +138,15 @@ private fun PlayBar(
 	onStop: () -> Unit,
 	onLoopChange: (Boolean) -> Unit,
 ) {
-	Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
-		Row(
-			modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-			verticalAlignment = Alignment.CenterVertically,
-			horizontalArrangement = Arrangement.spacedBy(8.dp),
-		) {
-			PlayPauseButton(snapshot.running, onPlayPause, size = 52)
-			IconButton(onClick = onStop) {
-				Icon(painterResource(R.drawable.ic_bar_stop_24dp), stringResource(R.string.practice_stop))
-			}
-			Text(
-				stringResource(R.string.practice_bpm, TGTempoMath.bpm(snapshot.baseTempo, if (snapshot.running) snapshot.currentPercent else 100)),
-				style = MaterialTheme.typography.titleLarge,
-				fontWeight = FontWeight.Bold,
-				modifier = Modifier.weight(1f),
+	BarSheet {
+		Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
+			ValueTile(
+				value = TGTempoMath.bpm(snapshot.baseTempo, if (snapshot.running) snapshot.currentPercent else 100).toString(),
+				label = stringResource(R.string.practice_bpm_unit),
 			)
-			ToggleIcon(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, loop, onChange = onLoopChange)
+			IconTile(R.drawable.ic_bar_stop_24dp, R.string.practice_stop, checked = false, onClick = onStop)
+			IconTile(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, checked = loop, onClick = { onLoopChange(!loop) })
+			PlayTile(snapshot.running, onPlayPause, Modifier.weight(1f))
 		}
 	}
 }
@@ -159,66 +165,45 @@ private fun PracticeBar(
 	var expanded by rememberSaveable { mutableStateOf(false) }
 	val base = snapshot.baseTempo
 
-	Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
-		Column {
-			AnimatedVisibility(visible = expanded) {
-				Column {
-					PracticeOptions(snapshot, settings, onSettingsChange, onCountIn)
-					HorizontalDivider()
-				}
+	BarSheet(expanded = expanded, onExpandedChange = { expanded = it }) {
+		if (settings.training) {
+			val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
+			Text(
+				stringResource(
+					R.string.practice_training_progress,
+					TGTempoMath.bpm(base, settings.fromPercent), TGTempoMath.bpm(base, settings.toPercent), step.first, step.second,
+				),
+				style = MaterialTheme.typography.bodyMedium,
+				color = MaterialTheme.colorScheme.primary,
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis,
+			)
+			LinearProgressIndicator(
+				progress = { step.first / step.second.toFloat() },
+				modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp),
+			)
+		}
+		Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
+			val percent = when {
+				snapshot.running -> snapshot.currentPercent
+				settings.training -> settings.fromPercent
+				else -> settings.fixedPercent
 			}
-			Row(
-				modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-				verticalAlignment = Alignment.CenterVertically,
-				horizontalArrangement = Arrangement.spacedBy(4.dp),
-			) {
-				PlayPauseButton(snapshot.running, onPlayPause, size = 56)
-				Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
-					val percent = when {
-						snapshot.running -> snapshot.currentPercent
-						settings.training -> settings.fromPercent
-						else -> settings.fixedPercent
-					}
-					Text(
-						stringResource(R.string.practice_bpm, TGTempoMath.bpm(base, percent)),
-						style = MaterialTheme.typography.headlineSmall,
-						fontWeight = FontWeight.Bold,
-					)
-					if (settings.training) {
-						val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
-						Text(
-							stringResource(
-								R.string.practice_training_progress,
-								TGTempoMath.bpm(base, settings.fromPercent), TGTempoMath.bpm(base, settings.toPercent), step.first, step.second,
-							),
-							style = MaterialTheme.typography.bodySmall,
-							maxLines = 1,
-							overflow = TextOverflow.Ellipsis,
-						)
-						LinearProgressIndicator(
-							progress = { step.first / step.second.toFloat() },
-							modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-						)
-					} else {
-						Text(
-							stringResource(R.string.practice_fixed_summary, settings.fixedPercent),
-							style = MaterialTheme.typography.bodySmall,
-							maxLines = 1,
-							overflow = TextOverflow.Ellipsis,
-						)
-					}
-				}
-				ToggleIcon(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, settings.isLooping, enabled = !settings.training) {
-					onSettingsChange(settings.copy(loop = it))
-				}
-				ToggleIcon(R.drawable.ic_bar_metronome_24dp, R.string.practice_metronome, snapshot.metronome) { onMetronome() }
-				IconButton(onClick = { expanded = !expanded }) {
-					Icon(
-						painterResource(if (expanded) R.drawable.ic_bar_expand_more_24dp else R.drawable.ic_bar_expand_less_24dp),
-						stringResource(if (expanded) R.string.practice_collapse else R.string.practice_expand),
-					)
-				}
+			// the speed tile opens the options, where the speed is set
+			ValueTile(
+				value = TGTempoMath.bpm(base, percent).toString(),
+				label = stringResource(if (settings.training) R.string.practice_training else R.string.practice_bpm_unit),
+				checked = expanded,
+				onClick = { expanded = !expanded },
+			)
+			IconTile(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, checked = settings.isLooping, enabled = !settings.training) {
+				onSettingsChange(settings.copy(loop = !settings.loop))
 			}
+			IconTile(R.drawable.ic_bar_metronome_24dp, R.string.practice_metronome, checked = snapshot.metronome, onClick = onMetronome)
+			PlayTile(snapshot.running, onPlayPause, Modifier.weight(1f))
+		}
+		AnimatedVisibility(visible = expanded) {
+			PracticeOptions(snapshot, settings, onSettingsChange, onCountIn)
 		}
 	}
 }
@@ -248,7 +233,7 @@ private fun PracticeOptions(
 		modifier = Modifier
 			.heightIn(max = 420.dp)
 			.verticalScroll(rememberScrollState())
-			.padding(16.dp),
+			.padding(top = 16.dp),
 		verticalArrangement = Arrangement.spacedBy(12.dp),
 	) {
 		// ---- speed
@@ -363,29 +348,121 @@ private fun PracticeOptions(
 
 // ---------------------------------------------------------------- shared pieces
 
+private val TILE_SIZE = 60.dp
+private val TILE_SPACING = 10.dp
+private val TILE_SHAPE = RoundedCornerShape(16.dp)
+
+/** Rounded sheet with a handle; tapping or dragging the handle expands or collapses it (when expandable). */
 @Composable
-private fun PlayPauseButton(running: Boolean, onClick: () -> Unit, size: Int) {
-	FilledIconButton(onClick = onClick, modifier = Modifier.size(size.dp)) {
-		Icon(
-			painterResource(if (running) R.drawable.ic_bar_pause_24dp else R.drawable.ic_bar_play_24dp),
-			stringResource(if (running) R.string.practice_pause else R.string.practice_play),
-			modifier = Modifier.size((size / 2).dp),
-		)
+private fun BarSheet(
+	expanded: Boolean = false,
+	onExpandedChange: ((Boolean) -> Unit)? = null,
+	content: @Composable ColumnScope.() -> Unit,
+) {
+	Surface(
+		shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+		tonalElevation = 3.dp,
+		modifier = Modifier.fillMaxWidth(),
+	) {
+		Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+			val handleModifier = if (onExpandedChange == null) Modifier else {
+				var dragged by remember { mutableStateOf(0f) }
+				Modifier
+					.clickable(onClickLabel = stringResource(if (expanded) R.string.practice_collapse else R.string.practice_expand)) {
+						onExpandedChange(!expanded)
+					}
+					.draggable(
+						orientation = Orientation.Vertical,
+						state = rememberDraggableState { dragged += it },
+						onDragStarted = { dragged = 0f },
+						onDragStopped = { if (dragged < -20f) onExpandedChange(true) else if (dragged > 20f) onExpandedChange(false) },
+					)
+			}
+			Box(
+				modifier = handleModifier.fillMaxWidth().height(if (onExpandedChange == null) 12.dp else 24.dp),
+				contentAlignment = Alignment.Center,
+			) {
+				if (onExpandedChange != null) {
+					Box(
+						Modifier
+							.width(40.dp)
+							.height(4.dp)
+							.clip(RoundedCornerShape(2.dp))
+							.background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
+					)
+				}
+			}
+			content()
+		}
 	}
 }
 
-/** Icon that is filled with the accent color while on, so its state is visible at a glance. */
 @Composable
-private fun ToggleIcon(icon: Int, description: Int, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
-	IconToggleButton(
-		checked = checked,
-		onCheckedChange = onChange,
-		enabled = enabled,
-		colors = IconButtonDefaults.iconToggleButtonColors(
-			checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-			checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-		),
+private fun Tile(
+	description: String,
+	checked: Boolean,
+	enabled: Boolean,
+	onClick: (() -> Unit)?,
+	content: @Composable () -> Unit,
+) {
+	val colors = MaterialTheme.colorScheme
+	val modifier = Modifier.size(TILE_SIZE).semantics { contentDescription = description }
+	val color = if (checked) colors.primaryContainer else colors.surfaceVariant
+	val contentColor = when {
+		!enabled -> colors.onSurfaceVariant.copy(alpha = 0.6f)
+		checked -> colors.onPrimaryContainer
+		else -> colors.onSurfaceVariant
+	}
+	if (onClick != null) {
+		Surface(onClick = onClick, enabled = enabled, shape = TILE_SHAPE, color = color, contentColor = contentColor, modifier = modifier) {
+			Box(contentAlignment = Alignment.Center) { content() }
+		}
+	} else {
+		Surface(shape = TILE_SHAPE, color = color, contentColor = contentColor, modifier = modifier) {
+			Box(contentAlignment = Alignment.Center) { content() }
+		}
+	}
+}
+
+/** Square tile with an icon and a small label below it; highlighted while on. */
+@Composable
+private fun IconTile(icon: Int, label: Int, checked: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+	val text = stringResource(label)
+	Tile(text, checked, enabled, onClick) {
+		Column(horizontalAlignment = Alignment.CenterHorizontally) {
+			Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(26.dp))
+			Text(text, fontSize = 10.sp, maxLines = 1)
+		}
+	}
+}
+
+/** Square tile showing a value (like the BPM) with a small label below it. */
+@Composable
+private fun ValueTile(value: String, label: String, checked: Boolean = false, onClick: (() -> Unit)? = null) {
+	Tile("$value $label", checked, true, onClick) {
+		Column(horizontalAlignment = Alignment.CenterHorizontally) {
+			Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+			Text(label, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+		}
+	}
+}
+
+/** Large accent colored play / pause tile. */
+@Composable
+private fun PlayTile(running: Boolean, onClick: () -> Unit, modifier: Modifier) {
+	Surface(
+		onClick = onClick,
+		shape = TILE_SHAPE,
+		color = MaterialTheme.colorScheme.primary,
+		contentColor = MaterialTheme.colorScheme.onPrimary,
+		modifier = modifier.height(TILE_SIZE),
 	) {
-		Icon(painterResource(icon), stringResource(description))
+		Box(contentAlignment = Alignment.Center) {
+			Icon(
+				painterResource(if (running) R.drawable.ic_bar_pause_24dp else R.drawable.ic_bar_play_24dp),
+				stringResource(if (running) R.string.practice_pause else R.string.practice_play),
+				modifier = Modifier.size(36.dp),
+			)
+		}
 	}
 }
