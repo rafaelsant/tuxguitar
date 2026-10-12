@@ -127,6 +127,8 @@ class TGPracticePlayer(private val context: TGContext) {
 		mode.loopSHeader = -1
 		mode.loopEHeader = -1
 		resetIfStopped()
+		// remove the practice loop markers
+		TGSongViewController.getInstance(context).redraw()
 	}
 
 	/** While playing, changes apply on the next loop pass (the player fixes the speed when it starts). */

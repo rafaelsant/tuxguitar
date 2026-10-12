@@ -69,20 +69,22 @@ import kotlinx.coroutines.delay
 object TGBottomBars {
 	@JvmStatic
 	fun bind(view: ComposeView, context: TGContext) {
-		val player = TGPracticePlayer(context)
+		val session = TGPracticeSession.getInstance(context)
 		val modeController = TGAppModeController.getInstance(context)
 		view.setContent {
 			TGComposeTheme {
-				TGBottomBarsContent(player, modeController)
+				TGBottomBarsContent(session, modeController)
 			}
 		}
 	}
 }
 
 @Composable
-private fun TGBottomBarsContent(player: TGPracticePlayer, modeController: TGAppModeController) {
+private fun TGBottomBarsContent(session: TGPracticeSession, modeController: TGAppModeController) {
 	val mode = modeController.mode
-	var settings by remember { mutableStateOf(player.loadSettings()) }
+	val player = session.player
+	// shared with the tablature, where long press and drag over measures sets the loop
+	val settings = session.settings
 	var playLoop by rememberSaveable { mutableStateOf(false) }
 	var snapshot by remember { mutableStateOf<TGPlayerSnapshot?>(null) }
 	val latestSettings by rememberUpdatedState(settings)
@@ -97,7 +99,7 @@ private fun TGBottomBarsContent(player: TGPracticePlayer, modeController: TGAppM
 				Toast.makeText(androidContext, stoppedMessage, Toast.LENGTH_SHORT).show()
 			}
 		}
-		if (mode == TGAppMode.PRACTICE) player.applyPractice(settings) else player.applyPlay(playLoop)
+		if (mode == TGAppMode.PRACTICE) session.apply() else player.applyPlay(playLoop)
 	}
 
 	// the player has no listener for these values, so poll them while the bars are shown
@@ -124,11 +126,7 @@ private fun TGBottomBarsContent(player: TGPracticePlayer, modeController: TGAppM
 		TGAppMode.PRACTICE -> PracticeBar(
 			snapshot = current,
 			settings = settings,
-			onSettingsChange = {
-				settings = it
-				player.saveSettings(it)
-				player.applyPractice(it)
-			},
+			onSettingsChange = { session.settings = it },
 			onPlayPause = { player.playPause(settings) },
 			onMetronome = { player.toggleMetronome() },
 			onCountIn = { player.toggleCountIn() },

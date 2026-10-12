@@ -34,6 +34,8 @@ public class TGMainFragment extends TGCachedFragment {
 	// this screen draws its own top bar (TGMainTopBar); the other screens still use the action bar
 	@Override
 	public void onShowView() {
+		// without the animation the space of the action bar is released right away
+		this.findActivity().getSupportActionBar().setShowHideAnimationEnabled(false);
 		this.findActivity().getSupportActionBar().hide();
 	}
 

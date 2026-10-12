@@ -159,7 +159,8 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 		HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
 		// ---- footer
-		Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+		// one per line: side by side, the longer translations wrapped
+		Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
 			TextButton(onClick = {
 				run(
 					TGOpenFragmentAction.NAME,
