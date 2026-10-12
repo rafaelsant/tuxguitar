@@ -17,7 +17,10 @@ Usar o TuxGuitar (editor de tablatura open source em Java, LGPL) como app Androi
 
 ## O que o app já tem
 Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Compose (Material 3, Kotlin 2.0, BOM 2024.12), tema claro/escuro seguindo o sistema (`view/compose/TGComposeTheme.kt`, acento verde-azulado).
-- Três modos na barra do topo, escolhidos por ícones (`view/practice/TGAppModeController.kt`): Play (padrão), Practice e Edit. Salvar, teclado de tablatura e menus de edição só no modo Edit.
+- Layout no estilo Songsterr: sem barra no topo. A partitura começa sob a barra de status, com nome e artista como cabeçalho que rola junto (`TGSongView.paintHeader`).
+- Barra flutuante de menu acima do player (`view/main/TGMainMenuBar.kt`): ☰ menu lateral, seletor de faixa, afinador, modo atual (menu com os nomes) e ⋮. Ela some enquanto a partitura rola e quando as opções de prática estão abertas.
+- Três modos (`view/practice/TGAppModeController.kt`): Play (padrão), Practice e Edit. Salvar, teclado de tablatura e menus de edição só no modo Edit.
+- Afinador (`fragment/impl/TGTunerFragment.kt`, detector YIN em `view/tuner/TGPitchDetector.java`): usa as cordas da faixa atual e toca a nota de referência.
 - Barra de baixo arrastável com 3 alturas (`view/practice/TGBottomBars.kt`):
   - Play: play/stop, BPM, loop.
   - Practice: BPM com −5/+5, rampa de treino em BPM (de/até/incremento, contador de voltas), loop por compasso, metrônomo e count-in.
@@ -25,7 +28,7 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - Loop pela tablatura: no modo Practice, toque longo + arrastar sobre os compassos define o trecho (`TGSongViewGestureDetector`).
 - Afinação (nomes das notas) ao lado da primeira pauta de tablatura (`TGLayout.DISPLAY_TUNING`).
 - Em Compose:
-  - barra do topo, menu ⋮ (bottom sheet por níveis), menu lateral com recentes e faixas, configurações;
+  - barra flutuante, menu ⋮ (bottom sheet por níveis), menu lateral com recentes e faixas, configurações;
   - tela de Instrumentos (mute/solo por faixa, volume por canal);
   - diálogos de edição (base `view/dialog/fragment/TGComposeModalFragment.kt`, componentes em `view/compose/TGForm.kt`).
 - Ainda em Views/XML:
@@ -39,15 +42,9 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - A verificar: issue aberta #1146 do upstream (repetições em modo loop).
 
 ## Próximos passos
-- Afinador: microfone via `AudioRecord` (permissão pedida na primeira abertura) e detecção de nota com YIN em Kotlin puro. Não usar TarsosDSP, que é GPL, incompatível com o LGPL do projeto.
-  - Usar a afinação da faixa atual (não só o E padrão), reconhecendo sozinho qual corda está sendo tocada.
-  - Tela em Compose com a nota e um ponteiro de cents (−50 a +50).
-  - Nota de referência tocada pelo sintetizador MIDI do app.
-  - Acesso pelos modos Play e Practice.
-  - Validar no aparelho as cordas graves (Drop C, 7 cordas) sem salto de oitava.
+- Afinador: validar no aparelho as cordas graves (Drop C, 7 cordas) sem salto de oitava.
 - Teclado de tablatura em Compose, se a edição pelo celular for muito usada.
-- Remover a action bar legada e o `TGMainMenu` quando o restante estiver estável.
-- Resquício de faixa escura acima da barra do topo em algumas transições.
+- Remover a action bar legada (hoje sempre escondida, só o navegador de arquivos opcional a mostra) e o `TGMainMenu`.
 - Count-in de mais de 1 compasso.
 
 ## Regras
