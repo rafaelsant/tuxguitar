@@ -1,5 +1,6 @@
 package app.tuxguitar.android.view.tablature;
 
+import app.tuxguitar.android.view.main.TGScoreScrollState;
 import app.tuxguitar.android.action.impl.caret.TGMoveToAxisPositionAction;
 import app.tuxguitar.android.R;
 import app.tuxguitar.android.application.TGApplicationUtil;
@@ -127,6 +128,7 @@ public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureLi
 					axisY.setValue(Math.max(Math.min(scroller.getCurrY(), axisY.getMaximum()), axisY.getMinimum()));
 				}
 				songView.redraw();
+				TGScoreScrollState.notifyScroll();
 				songView.postOnAnimation(this);
 			}
 		}
@@ -137,6 +139,7 @@ public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureLi
 		if( this.songView.getController().isScrollActionAvailable() ) {
 			this.updateAxis(this.songView.getController().getScroll().getX(), distanceX);
 			this.updateAxis(this.songView.getController().getScroll().getY(), distanceY);
+			TGScoreScrollState.notifyScroll();
 		}
 		return true;
 	}

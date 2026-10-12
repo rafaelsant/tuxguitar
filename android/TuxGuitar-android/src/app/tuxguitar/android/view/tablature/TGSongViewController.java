@@ -102,8 +102,13 @@ public class TGSongViewController implements TGController {
 	}
 
 	public void updateScroll(UIRectangle bounds) {
+		this.updateScroll(bounds, 0);
+	}
+
+	/** @param extraHeight room the view adds around the score (song header, space for the floating menu) */
+	public void updateScroll(UIRectangle bounds, float extraHeight) {
 		this.getScroll().getX().setMaximum(Math.max((this.getLayout().getWidth() - bounds.getWidth()), 0));
-		this.getScroll().getY().setMaximum(Math.max((this.getLayout().getHeight() - bounds.getHeight()), 0));
+		this.getScroll().getY().setMaximum(Math.max((this.getLayout().getHeight() + extraHeight - bounds.getHeight()), 0));
 	}
 
 	public void updateSelection() {

@@ -10,6 +10,8 @@ import app.tuxguitar.ui.resource.UIRectangle;
 import app.tuxguitar.graphics.control.TGBeatImpl;
 import app.tuxguitar.graphics.control.TGMeasureImpl;
 import app.tuxguitar.player.base.MidiPlayer;
+import app.tuxguitar.song.models.TGSong;
+import app.tuxguitar.ui.resource.UIColorModel;
 import app.tuxguitar.util.TGContext;
 import app.tuxguitar.util.TGException;
 import app.tuxguitar.util.error.TGErrorManager;
@@ -17,12 +19,21 @@ import app.tuxguitar.util.error.TGErrorManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.text.TextPaint;
+import android.text.TextUtils;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
 public class TGSongView extends View {
+
+	private static final float HEADER_HEIGHT_DP = 72;
+	private static final float HEADER_HEIGHT_NO_ARTIST_DP = 50;
+	private static final float BOTTOM_SPACE_DP = 88;
 
 	private TGContext context;
 	private TGSongViewController controller;
@@ -102,10 +113,12 @@ public class TGSongView extends View {
 
 	public void paintTablature(UIPainter painter, UIRectangle area) {
 		if (this.controller.getSong() != null) {
-			this.controller.getLayoutPainter().paint(painter, area, -this.getPaintableScrollX(), -this.getPaintableScrollY());
+			float headerHeight = this.getHeaderHeight();
+			this.controller.getLayoutPainter().paint(painter, area, -this.getPaintableScrollX(), -this.getPaintableScrollY() + headerHeight);
+			this.paintHeader(painter, headerHeight);
 			this.controller.getCaret().paintCaret(this.controller.getLayout(), painter);
 
-			this.controller.updateScroll(area);
+			this.controller.updateScroll(area, headerHeight + this.getBottomSpace());
 
 			if (MidiPlayer.getInstance(this.context).isRunning()) {
 				this.paintTablaturePlayMode(painter, area);
@@ -121,6 +134,54 @@ public class TGSongView extends View {
 				this.moveScrollTo(this.controller.getCaret().getMeasure(), area);
 			}
 		}
+	}
+
+	/** Room above the score for the song title and artist, which scroll with it; none for a song without a name. */
+	public float getHeaderHeight() {
+		TGSong song = this.controller.getSong();
+		if( song == null || song.getName() == null || song.getName().trim().isEmpty() ) {
+			return 0;
+		}
+		boolean artist = (song.getArtist() != null && !song.getArtist().trim().isEmpty());
+		return this.getDefaultScale() * (artist ? HEADER_HEIGHT_DP : HEADER_HEIGHT_NO_ARTIST_DP);
+	}
+
+	/** Room below the score, so the floating menu bar never covers its last line. */
+	public float getBottomSpace() {
+		return this.getDefaultScale() * BOTTOM_SPACE_DP;
+	}
+
+	private void paintHeader(UIPainter painter, float headerHeight) {
+		if( headerHeight <= 0 || !(painter instanceof TGPainterImpl) ) {
+			return;
+		}
+		TGSong song = this.controller.getSong();
+		Canvas canvas = ((TGPainterImpl) painter).getCanvas();
+		float density = this.getDefaultScale();
+		float top = -this.getPaintableScrollY();
+		if( top + headerHeight < 0 ) {
+			return;
+		}
+		UIColorModel color = this.controller.getStyles().getForegroundColor();
+		int rgb = Color.rgb(color.getRed(), color.getGreen(), color.getBlue());
+
+		Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		paint.setColor(rgb);
+		paint.setTypeface(Typeface.DEFAULT_BOLD);
+		paint.setTextSize(22 * density);
+		canvas.drawText(ellipsize(song.getName().trim(), paint, canvas), 16 * density, top + 34 * density, paint);
+
+		if( song.getArtist() != null && !song.getArtist().trim().isEmpty() ) {
+			paint.setTypeface(Typeface.DEFAULT);
+			paint.setTextSize(15 * density);
+			paint.setAlpha(170);
+			canvas.drawText(ellipsize(song.getArtist().trim(), paint, canvas), 16 * density, top + 58 * density, paint);
+		}
+	}
+
+	private String ellipsize(String text, Paint paint, Canvas canvas) {
+		float width = (this.getWidth() - 32 * this.getDefaultScale());
+		return TextUtils.ellipsize(text, new TextPaint(paint), Math.max(width, 0), TextUtils.TruncateAt.END).toString();
 	}
 
 	public void paintTablaturePlayMode(UIPainter painter, UIRectangle area) {

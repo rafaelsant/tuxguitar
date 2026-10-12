@@ -9,11 +9,6 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true">
 
-        <!-- Top bar drawn with Compose (TGMainTopBar.kt); replaces the action bar on this screen -->
-        <androidx.compose.ui.platform.ComposeView
-            android:id="@+id/main_top_bar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
     </FrameLayout>
 
     <FrameLayout
@@ -56,5 +51,13 @@
 
         <include layout="@layout/view_tablature" />
     </FrameLayout>
+
+    <!-- Floating menu bar drawn with Compose (TGMainMenuBar.kt), over the bottom of the score and above the player
+         or the tab keyboard. Touches outside the bar go through to the score. -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/main_menu_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/main_bottom" />
 
 </RelativeLayout>

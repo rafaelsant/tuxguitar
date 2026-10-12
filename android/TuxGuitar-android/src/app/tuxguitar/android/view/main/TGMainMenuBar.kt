@@ -1,6 +1,20 @@
 package app.tuxguitar.android.view.main
 
 import app.tuxguitar.android.fragment.impl.openTuner
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import app.tuxguitar.android.action.impl.track.TGGoToTrackAction
+import app.tuxguitar.android.view.tablature.TGSongViewController
+import app.tuxguitar.document.TGDocumentContextAttributes
+import app.tuxguitar.song.models.TGTrack
 import android.view.Menu
 import android.view.View
 import android.widget.Toast
@@ -75,72 +89,133 @@ import app.tuxguitar.player.base.MidiPlayer
 import app.tuxguitar.util.TGContext
 import kotlinx.coroutines.delay
 
-/** Top bar of the main screen: side menu, song title, the three modes and the overflow menu. */
-object TGMainTopBar {
+/**
+ * Floating menu bar of the main screen, above the player (like Songsterr): side menu, track, tuner, the three modes
+ * and the overflow menu. There is no top bar: the score starts under the status bar, with the song title as its header.
+ */
+object TGMainMenuBar {
 	@JvmStatic
 	fun bind(view: ComposeView, context: TGContext) {
 		view.setContent {
 			TGComposeTheme {
-				MainTopBar(context)
+				MainMenuBar(context)
 			}
 		}
 	}
 }
 
 @Composable
-private fun MainTopBar(context: TGContext) {
+private fun MainMenuBar(context: TGContext) {
 	val activity = TGActivityController.getInstance(context).activity
-	val defaultTitle = stringResource(R.string.app_name)
-	var title by remember { mutableStateOf(SongTitle(defaultTitle, null)) }
+	var tracks by remember { mutableStateOf(listOf<TrackOption>()) }
 
-	// the song can change at any time (open, new, edit info); polling keeps this simple
+	// the song and the selected track can change at any time; polling keeps this simple
 	LaunchedEffect(Unit) {
 		while (true) {
-			title = runCatching { songTitle(context) }.getOrNull() ?: SongTitle(defaultTitle, null)
+			tracks = runCatching { trackOptions(context) }.getOrNull() ?: listOf()
 			delay(500)
 		}
 	}
 
-	// the status bar (and the notch area around it) takes the color of the bar, so no band is left between them
-	val barColor = MaterialTheme.colorScheme.surfaceContainer
-	val darkIcons = !isSystemInDarkTheme()
+	// no top bar: the status bar (and the notch area) takes the color of the score under it
+	val dark = isSystemInDarkTheme()
+	val scoreColor = if (dark) Color(0xFF121212) else Color.White
 	SideEffect {
 		activity?.let {
-			it.window.statusBarColor = barColor.toArgb()
-			(it.findViewById<View>(R.id.root_layout) as? DrawerLayout)?.setStatusBarBackgroundColor(barColor.toArgb())
-			WindowCompat.getInsetsController(it.window, it.window.decorView).isAppearanceLightStatusBars = darkIcons
+			it.window.statusBarColor = scoreColor.toArgb()
+			(it.findViewById<View>(R.id.root_layout) as? DrawerLayout)?.setStatusBarBackgroundColor(scoreColor.toArgb())
+			WindowCompat.getInsetsController(it.window, it.window.decorView).isAppearanceLightStatusBars = !dark
 		}
 	}
 
-	Surface(color = barColor, modifier = Modifier.fillMaxWidth()) {
-		Row(
-			modifier = Modifier.height(56.dp).padding(horizontal = 4.dp),
-			verticalAlignment = Alignment.CenterVertically,
+	// steps aside while the score is scrolled, and comes back shortly after it stops
+	val lastScroll = TGScoreScrollState.lastScrollMillis
+	var scrolling by remember { mutableStateOf(false) }
+	LaunchedEffect(lastScroll) {
+		if (lastScroll > 0) {
+			scrolling = true
+			delay(800)
+			scrolling = false
+		}
+	}
+
+	AnimatedVisibility(
+		visible = !scrolling,
+		enter = fadeIn() + slideInVertically { it / 2 },
+		exit = fadeOut() + slideOutVertically { it / 2 },
+	) {
+		Surface(
+			shape = CircleShape,
+			color = MaterialTheme.colorScheme.surfaceContainerHigh,
+			tonalElevation = 3.dp,
+			shadowElevation = 6.dp,
+			modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
 		) {
-			IconButton(onClick = { activity?.drawerManager?.openDrawer() }) {
-				Icon(painterResource(R.drawable.ic_bar_menu_24dp), stringResource(R.string.main_open_side_menu))
-			}
-			// at 360dp only ~110dp are left for the title: two small lines instead of one large
-			Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
-				Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-				title.artist?.let {
-					Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+			Row(
+				modifier = Modifier.height(52.dp).padding(horizontal = 4.dp),
+				verticalAlignment = Alignment.CenterVertically,
+			) {
+				IconButton(onClick = { activity?.drawerManager?.openDrawer() }, modifier = Modifier.size(44.dp)) {
+					Icon(painterResource(R.drawable.ic_bar_menu_24dp), stringResource(R.string.main_open_side_menu))
 				}
-			}
-			ModeSwitcher(TGAppModeController.getInstance(context))
-			if (activity != null) {
-				OverflowMenu(context, activity, TGAppModeController.getInstance(context).mode)
+				TrackSelector(context, tracks, Modifier.weight(1f))
+				if (activity != null) {
+					IconButton(onClick = { openTuner(context, activity) }, modifier = Modifier.size(44.dp)) {
+						Icon(painterResource(R.drawable.ic_bar_tuner_24dp), stringResource(R.string.tuner_title))
+					}
+				}
+				ModeSwitcher(TGAppModeController.getInstance(context))
+				if (activity != null) {
+					OverflowMenu(context, activity, TGAppModeController.getInstance(context).mode)
+				}
 			}
 		}
 	}
 }
 
-private data class SongTitle(val name: String, val artist: String?)
+private class TrackOption(val track: TGTrack, val name: String, val selected: Boolean)
 
-private fun songTitle(context: TGContext): SongTitle? {
-	val song = TGDocumentManager.getInstance(context).song ?: return null
-	val name = song.name?.takeIf { it.isNotBlank() } ?: return null
-	return SongTitle(name, song.artist?.takeIf { it.isNotBlank() })
+private fun trackOptions(context: TGContext): List<TrackOption> {
+	val song = TGDocumentManager.getInstance(context).song ?: return listOf()
+	val selected = TGSongViewController.getInstance(context).caret.track
+	return (0 until song.countTracks()).map { i ->
+		val track = song.getTrack(i)
+		TrackOption(track, track.name, track == selected)
+	}
+}
+
+/** Name of the track shown in the score; a tap lists the others. */
+@Composable
+private fun TrackSelector(context: TGContext, tracks: List<TrackOption>, modifier: Modifier) {
+	var expanded by remember { mutableStateOf(false) }
+	val current = tracks.firstOrNull { it.selected }
+	Box(modifier = modifier) {
+		TextButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+			Text(
+				current?.name ?: "",
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis,
+				modifier = Modifier.weight(1f, fill = false),
+			)
+			Icon(painterResource(R.drawable.ic_bar_expand_more_24dp), contentDescription = null)
+		}
+		DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+			tracks.forEach { option ->
+				DropdownMenuItem(
+					text = { Text(option.name, fontWeight = if (option.selected) FontWeight.Bold else FontWeight.Normal) },
+					trailingIcon = if (option.selected) {
+						{ Icon(painterResource(R.drawable.ic_bar_check_24dp), null, tint = MaterialTheme.colorScheme.primary) }
+					} else null,
+					onClick = {
+						expanded = false
+						val processor = TGActionProcessor(context, TGGoToTrackAction.NAME)
+						processor.setAttribute(TGDocumentContextAttributes.ATTRIBUTE_TRACK, option.track)
+						processor.process()
+					},
+				)
+			}
+		}
+	}
 }
 
 /** The three modes in a pill; the selected one is filled with the accent container color. */
@@ -160,6 +235,7 @@ private fun ModeButton(modeController: TGAppModeController, mode: TGAppMode, ico
 	IconToggleButton(
 		checked = modeController.mode == mode,
 		onCheckedChange = { modeController.setMode(mode) },
+		modifier = Modifier.size(40.dp),
 		colors = IconButtonDefaults.iconToggleButtonColors(
 			checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
 			checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -189,9 +265,8 @@ private class RootEntry(
 private fun rootEntries(mode: TGAppMode, context: TGContext, activity: TGActivity): List<RootEntry> {
 	val view = RootEntry(R.string.action_menu_view, { TGViewMenu(it) })
 	val settings = RootEntry(R.string.action_menu_settings, run = { openSettings(context, activity) })
-	val tuner = RootEntry(R.string.tuner_title, run = { openTuner(context, activity) })
 	if (mode != TGAppMode.EDIT) {
-		return listOf(tuner, view, settings)
+		return listOf(view, settings)
 	}
 	return listOf(
 		RootEntry(R.string.action_menu_edit, { TGEditMenu(it) }),
@@ -207,7 +282,6 @@ private fun rootEntries(mode: TGAppMode, context: TGContext, activity: TGActivit
 		)),
 		RootEntry(R.string.action_menu_transport, { TGTransportMenu(it) }),
 		RootEntry(R.string.main_edit_song_tempo, run = { openTempoDialog(context, activity) }),
-		tuner,
 		settings,
 	)
 }
