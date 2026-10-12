@@ -1,0 +1,31 @@
+name: Android debug APK
+
+# Manual run (Actions tab > Run workflow) or any push to a branch named android-*
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "android-*" ]
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: gradle
+    - name: Build debug APK
+      run: |
+        cd android/build-scripts/tuxguitar-android
+        chmod +x gradlew
+        ./gradlew :apk:assembleDebug
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: tuxguitar-debug-apk
+        path: android/build-scripts/tuxguitar-android/apk/build/outputs/apk/debug/*.apk
+        if-no-files-found: error
+        retention-days: 14
