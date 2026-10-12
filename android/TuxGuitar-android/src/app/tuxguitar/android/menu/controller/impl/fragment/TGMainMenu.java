@@ -1,5 +1,7 @@
 package app.tuxguitar.android.menu.controller.impl.fragment;
 
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -39,6 +41,9 @@ import app.tuxguitar.util.singleton.TGSingletonFactory;
 import app.tuxguitar.util.singleton.TGSingletonUtil;
 
 public class TGMainMenu implements TGMenuController {
+
+	// accent of the Compose screens (TGComposeTheme), for the selected mode icon
+	private static final int MODE_ACTIVE_COLOR = 0xFF4DB6AC;
 
 	private TGContext context;
 	private TGToggleStyledIconHelper styledIconHelper;
@@ -89,7 +94,10 @@ public class TGMainMenu implements TGMenuController {
 	private void initializeModeItem(Menu menu, int id, final TGAppMode mode) {
 		final TGAppModeController modeController = TGAppModeController.getInstance(getContext());
 		MenuItem item = menu.findItem(id);
-		item.getIcon().mutate().setAlpha(modeController.getMode() == mode ? 255 : 110);
+		boolean active = (modeController.getMode() == mode);
+		Drawable icon = item.getIcon().mutate();
+		icon.setTint(active ? MODE_ACTIVE_COLOR : Color.WHITE);
+		icon.setAlpha(active ? 255 : 140);
 		item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
 			public boolean onMenuItemClick(MenuItem item) {
 				modeController.setMode(mode);
