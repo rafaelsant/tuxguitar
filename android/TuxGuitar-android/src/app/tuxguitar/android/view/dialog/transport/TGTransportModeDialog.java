@@ -6,14 +6,10 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.RadioButton;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.graphics.BlendMode;
 import android.graphics.BlendModeColorFilter;
@@ -22,16 +18,16 @@ import android.graphics.Color;
 import app.tuxguitar.android.R;
 import app.tuxguitar.android.action.impl.caret.TGMoveToAction;
 import app.tuxguitar.android.view.dialog.fragment.TGModalFragment;
+import app.tuxguitar.android.view.tablature.TGSongViewController;
+import app.tuxguitar.android.view.util.TGNumberStepper;
 import app.tuxguitar.document.TGDocumentContextAttributes;
 import app.tuxguitar.editor.action.TGActionProcessor;
 import app.tuxguitar.player.base.MidiPlayer;
 import app.tuxguitar.player.base.MidiPlayerMode;
 import app.tuxguitar.song.models.TGBeat;
 import app.tuxguitar.song.models.TGMeasureHeader;
+import app.tuxguitar.song.models.TGSong;
 import app.tuxguitar.song.models.TGTrack;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class TGTransportModeDialog extends TGModalFragment {
 
@@ -43,28 +39,38 @@ public class TGTransportModeDialog extends TGModalFragment {
 
 	protected TextView simpleLabel;
 	protected TextView simplePercentLabel;
-	protected Spinner simplePercent;
+	protected TGNumberStepper simplePercent;
+	protected TextView simplePercentHint;
 	protected CheckBox simpleLoop;
 
 	protected TextView customLabel;
 	protected TextView customFromLabel;
-	protected Spinner customFrom;
+	protected TGNumberStepper customFrom;
+	protected TextView customFromHint;
 	protected TextView customToLabel;
-	protected Spinner customTo;
+	protected TGNumberStepper customTo;
+	protected TextView customToHint;
 	protected TextView customIncrementLabel;
-	protected Spinner customIncrement;
+	protected TGNumberStepper customIncrement;
+	protected TextView customIncrementHint;
+	protected View[] customIncrementPresets;
+	protected TextView customError;
 
 	protected TextView loopLabel;
 	protected TextView loopFromLabel;
-	protected Spinner loopFrom;
+	protected TGNumberStepper loopFrom;
+	protected View loopFromCurrent;
+	protected TextView loopFromHint;
 	protected TextView loopToLabel;
-	protected Spinner loopTo;
+	protected TGNumberStepper loopTo;
+	protected View loopToCurrent;
+	protected TextView loopToHint;
+	protected TextView loopError;
 
-	private final int bgcolorErr = Color.rgb(230,110,110);
-	private final int bgcolorOK = Color.TRANSPARENT;
 	private final int colorErr = Color.GRAY;
 	private final int colorOK = Color.TRANSPARENT;
 
+	protected int measureCount;
 	protected boolean ok;
 
 	public TGTransportModeDialog() {
@@ -81,14 +87,16 @@ public class TGTransportModeDialog extends TGModalFragment {
 		menuInflater.inflate(R.menu.menu_modal_fragment_ok, menu);
 		menu.findItem(R.id.action_ok).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
 			public boolean onMenuItemClick(MenuItem item) {
+				if(!updateState()) {
+					return true;
+				}
 
 				//------ Set transport mode ------
 
 				Integer type = (custom.isChecked() ? MidiPlayerMode.TYPE_CUSTOM : MidiPlayerMode.TYPE_SIMPLE );
 				Boolean loop = (type == MidiPlayerMode.TYPE_CUSTOM || (type == MidiPlayerMode.TYPE_SIMPLE && simpleLoop.isChecked()));
-				Integer simplePcInt = (int) simplePercent.getSelectedItem();
-				Integer loopSHeader = ((int) loopFrom.getSelectedItemId() == 0 ? -1 : getMeasureNb(loopFrom));
-				Integer loopEHeader = ((int) loopTo.getSelectedItemId() == 0 ? -1 : getMeasureNb(loopTo));
+				Integer loopSHeader = (loopFrom.getValue() <= 1 ? -1 : loopFrom.getValue());
+				Integer loopEHeader = (loopTo.getValue() >= measureCount ? -1 : loopTo.getValue());
 
 				// move caret to loop start if loop defined
 				if (loop) {
@@ -102,10 +110,10 @@ public class TGTransportModeDialog extends TGModalFragment {
 				MidiPlayerMode mode = MidiPlayer.getInstance(findContext()).getMode();
 				mode.setType(type);
 				mode.setLoop(loop);
-				mode.setSimplePercent(simplePcInt);
-				mode.setCustomPercentFrom((int) customFrom.getSelectedItem());
-				mode.setCustomPercentTo((int) customTo.getSelectedItem());
-				mode.setCustomPercentIncrement((int) customIncrement.getSelectedItem());
+				mode.setSimplePercent(simplePercent.getValue());
+				mode.setCustomPercentFrom(customFrom.getValue());
+				mode.setCustomPercentTo(customTo.getValue());
+				mode.setCustomPercentIncrement(customIncrement.getValue());
 				mode.setLoopSHeader(loopSHeader);
 				mode.setLoopEHeader(loopEHeader);
 
@@ -124,225 +132,251 @@ public class TGTransportModeDialog extends TGModalFragment {
 
 	@SuppressLint("InflateParams")
 	public void onPostInflateView() {
-
-		//------ Initialize menu items ------
-
-		ArrayAdapter<Integer> percentArrayAdapter = new ArrayAdapter<Integer>(getActivity(), android.R.layout.simple_spinner_item, createPercentValues());
-		ArrayAdapter<String>loopFromArrayAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, createLoopFromValues());
-		ArrayAdapter<String>loopToArrayAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_spinner_item, createLoopToValuesFrom(1));
+		View view = this.getView();
+		this.measureCount = getSong().countMeasureHeaders();
 
 		//---Simple/Trainer selector---
-		this.simple = (RadioButton) this.getView().findViewById(R.id.transport_mode_dlg_simple);
-		this.custom = (RadioButton) this.getView().findViewById(R.id.transport_mode_dlg_trainer);
+		this.simple = (RadioButton) view.findViewById(R.id.transport_mode_dlg_simple);
+		this.custom = (RadioButton) view.findViewById(R.id.transport_mode_dlg_trainer);
 
 		//---Simple---
-		this.simpleLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_simple_label);
-		this.simplePercentLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_simple_tempo_percent_label);
-		this.simplePercent = (Spinner) this.getView().findViewById(R.id.transport_mode_dlg_simple_tempo_percent_value);
-		this.simpleLoop = (CheckBox) this.getView().findViewById(R.id.transport_mode_dlg_simple_loop);
+		this.simpleLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_simple_label);
+		this.simplePercentLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_simple_tempo_percent_label);
+		this.simplePercent = new TGNumberStepper(view.findViewById(R.id.transport_mode_dlg_simple_tempo_percent_value), MIN_SELECTION, MAX_SELECTION);
+		this.simplePercentHint = (TextView) view.findViewById(R.id.transport_mode_dlg_simple_tempo_percent_hint);
+		this.simpleLoop = (CheckBox) view.findViewById(R.id.transport_mode_dlg_simple_loop);
 
 		//---Trainer---
-		this.customLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_trainer_label);
-		this.customFromLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_from_label);
-		this.customFrom = (Spinner) this.getView().findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_from_value);
-		this.customToLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_to_label);
-		this.customTo = (Spinner) this.getView().findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_to_value);
-		this.customIncrementLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_trainer_tempo_increment_label);
-		this.customIncrement = (Spinner) this.getView().findViewById(R.id.transport_mode_dlg_trainer_tempo_increment_value);
+		this.customLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_label);
+		this.customFromLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_from_label);
+		this.customFrom = new TGNumberStepper(view.findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_from_value), MIN_SELECTION, MAX_SELECTION);
+		this.customFromHint = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_from_hint);
+		this.customToLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_to_label);
+		this.customTo = new TGNumberStepper(view.findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_to_value), MIN_SELECTION, MAX_SELECTION);
+		this.customToHint = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_tempo_percent_to_hint);
+		this.customIncrementLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_tempo_increment_label);
+		this.customIncrement = new TGNumberStepper(view.findViewById(R.id.transport_mode_dlg_trainer_tempo_increment_value), MIN_SELECTION, MAX_SELECTION);
+		this.customIncrementHint = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_tempo_increment_hint);
+		this.customIncrementPresets = new View[] {
+			this.createIncrementPreset(view, R.id.transport_mode_dlg_trainer_tempo_increment_preset_1, 1),
+			this.createIncrementPreset(view, R.id.transport_mode_dlg_trainer_tempo_increment_preset_2, 2),
+			this.createIncrementPreset(view, R.id.transport_mode_dlg_trainer_tempo_increment_preset_5, 5),
+			this.createIncrementPreset(view, R.id.transport_mode_dlg_trainer_tempo_increment_preset_10, 10),
+		};
+		this.customError = (TextView) view.findViewById(R.id.transport_mode_dlg_trainer_error);
 
 		//--- Loop Range ---
-		this.loopLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_loop_range_label);
-		this.loopFromLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_loop_range_from_label);
-		this.loopFrom = (Spinner) this.getView().findViewById(R.id.transport_mode_dlg_loop_range_from_value);
-		this.loopToLabel = (TextView) this.getView().findViewById(R.id.transport_mode_dlg_loop_range_to_label);
-		this.loopTo = (Spinner) this.getView().findViewById(R.id.transport_mode_dlg_loop_range_to_value);
+		this.loopLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_loop_range_label);
+		this.loopFromLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_loop_range_from_label);
+		this.loopFrom = new TGNumberStepper(view.findViewById(R.id.transport_mode_dlg_loop_range_from_value), 1, this.measureCount);
+		this.loopFromCurrent = view.findViewById(R.id.transport_mode_dlg_loop_range_from_current);
+		this.loopFromHint = (TextView) view.findViewById(R.id.transport_mode_dlg_loop_range_from_hint);
+		this.loopToLabel = (TextView) view.findViewById(R.id.transport_mode_dlg_loop_range_to_label);
+		this.loopTo = new TGNumberStepper(view.findViewById(R.id.transport_mode_dlg_loop_range_to_value), 1, this.measureCount);
+		this.loopToCurrent = view.findViewById(R.id.transport_mode_dlg_loop_range_to_current);
+		this.loopToHint = (TextView) view.findViewById(R.id.transport_mode_dlg_loop_range_to_hint);
+		this.loopError = (TextView) view.findViewById(R.id.transport_mode_dlg_loop_range_error);
 
-		Integer type = (this.custom.isChecked() ? MidiPlayerMode.TYPE_CUSTOM : MidiPlayerMode.TYPE_SIMPLE );
-		Boolean loop = (type == MidiPlayerMode.TYPE_CUSTOM || (type == MidiPlayerMode.TYPE_SIMPLE && this.simpleLoop.isChecked()));
-
-		enableTrainerMode(type == MidiPlayerMode.TYPE_CUSTOM);
-		enableLoop(loop);
-
-		this.custom.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				enableTrainerMode(isChecked);
-				enableLoop(isChecked || simpleLoop.isChecked());
-			}
-		});
-
-		this.simpleLoop.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				enableLoop(isChecked);
-			}
-		});
-
-		this.customFrom.setOnItemSelectedListener(new OnItemSelectedListener() {
-			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-				trainerTempoOnSelect(parent);
-			}
-			public void onNothingSelected(AdapterView<?> parent) {
-			}
-		});
-
-		this.customTo.setOnItemSelectedListener(new OnItemSelectedListener() {
-			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-				trainerTempoOnSelect(parent);
-			}
-			public void onNothingSelected(AdapterView<?> parent) {
-			}
-		});
-
-		this.customIncrement.setOnItemSelectedListener(new OnItemSelectedListener() {
-			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-				trainerTempoOnSelect(parent);
-			}
-			public void onNothingSelected(AdapterView<?> parent) {
-			}
-		});
-
-		this.loopFrom.setOnItemSelectedListener(new OnItemSelectedListener() {
-			public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-				String oldToItem = loopTo.getSelectedItem().toString();
-				Integer oldToItemId = (int) loopTo.getSelectedItemId();
-
-				// fill "loop to" spinner with values >= from
-				loopToArrayAdapter.clear();
-				loopToArrayAdapter.addAll(createLoopToValuesFrom((int) loopFrom.getSelectedItemId() < 1 ? 1 : getMeasureNb(loopFrom)));
-
-				// restore old "lopp to" spinner selection
-				if (oldToItemId == 0) {
-					// to the end
-					loopTo.setSelection(0);
-				} else if (loopToArrayAdapter.getPosition(oldToItem) > -1) {
-					// same measure as before
-					loopTo.setSelection(loopToArrayAdapter.getPosition(oldToItem));
-				} else {
-					// same measure as from
-					loopTo.setSelection(loopToArrayAdapter.getPosition(loopFrom.getSelectedItem().toString()));
-				}
-			}
-			public void onNothingSelected(AdapterView<?> parent) {
-			}
-		});
-
+		//--- Initial values ---
 		MidiPlayerMode mode = MidiPlayer.getInstance(findContext()).getMode();
 
 		this.simple.setChecked(mode.getType() == MidiPlayerMode.TYPE_SIMPLE);
 		this.custom.setChecked(mode.getType() == MidiPlayerMode.TYPE_CUSTOM);
-
-		this.simplePercent.setAdapter(percentArrayAdapter);
-		this.simplePercent.setSelection(percentArrayAdapter.getPosition(mode.getSimplePercent()));
-
 		this.simpleLoop.setChecked(mode.isLoop());
+		this.simplePercent.setValue(mode.getSimplePercent());
+		this.customFrom.setValue(mode.getCustomPercentFrom());
+		this.customTo.setValue(mode.getCustomPercentTo());
+		this.customIncrement.setValue(mode.getCustomPercentIncrement());
+		this.loopFrom.setValue(mode.getLoopSHeader() > 0 ? mode.getLoopSHeader() : 1);
+		this.loopTo.setValue(mode.getLoopEHeader() > 0 ? mode.getLoopEHeader() : this.measureCount);
 
-		this.customFrom.setAdapter(percentArrayAdapter);
-		this.customFrom.setSelection(percentArrayAdapter.getPosition(mode.getCustomPercentFrom()));
+		//--- Listeners ---
+		TGNumberStepper.Listener updateListener = new TGNumberStepper.Listener() {
+			public void onValueChanged(TGNumberStepper stepper) {
+				updateState();
+			}
+		};
+		this.simplePercent.setListener(updateListener);
+		this.customFrom.setListener(updateListener);
+		this.customTo.setListener(updateListener);
+		this.customIncrement.setListener(updateListener);
+		this.loopTo.setListener(updateListener);
+		this.loopFrom.setListener(new TGNumberStepper.Listener() {
+			public void onValueChanged(TGNumberStepper stepper) {
+				// keep the range valid when the start is moved past the end
+				if (loopFrom.isValid() && loopTo.isValid() && loopFrom.getValue() > loopTo.getValue()) {
+					loopTo.setValue(loopFrom.getValue());
+				}
+				updateState();
+			}
+		});
 
-		this.customTo.setAdapter(percentArrayAdapter);
-		this.customTo.setSelection(percentArrayAdapter.getPosition(mode.getCustomPercentTo()));
+		this.loopFromCurrent.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				loopFrom.changeValue(getCaretMeasureNumber());
+			}
+		});
+		this.loopToCurrent.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				loopTo.changeValue(getCaretMeasureNumber());
+			}
+		});
 
-		this.customIncrement.setAdapter(percentArrayAdapter);
-		this.customIncrement.setSelection(percentArrayAdapter.getPosition(mode.getCustomPercentIncrement()));
+		OnCheckedChangeListener checkedListener = new OnCheckedChangeListener() {
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				updateState();
+			}
+		};
+		this.custom.setOnCheckedChangeListener(checkedListener);
+		this.simpleLoop.setOnCheckedChangeListener(checkedListener);
 
-		this.loopFrom.setAdapter(loopFromArrayAdapter);
-		this.loopFrom.setSelection(mode.getLoopSHeader() > 0 ? mode.getLoopSHeader() : 0);
-
-		this.loopTo.setAdapter(loopToArrayAdapter);
-		this.loopTo.setSelection(mode.getLoopEHeader() > 0 ? mode.getLoopEHeader() : 0);
+		this.updateState();
 	}
 
-	public void trainerTempoOnSelect (AdapterView<?> parent) {
+	private View createIncrementPreset(View view, int id, final int value) {
+		View button = view.findViewById(id);
+		button.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				customIncrement.changeValue(value);
+			}
+		});
+		return button;
+	}
+
+	/**
+	 * Refreshes enabled states, hints and error messages.
+	 * Only the sections in use are validated, so the training values never block saving the simple mode.
+	 */
+	protected boolean updateState() {
+		boolean isTrainer = this.custom.isChecked();
+		boolean isLoop = (isTrainer || this.simpleLoop.isChecked());
+
+		this.enableTrainerMode(isTrainer);
+		this.enableLoop(isLoop);
+
 		boolean ok = true;
-		if (parent.equals(customFrom)) {
-			if ((int) customFrom.getSelectedItem() >= (int) customTo.getSelectedItem()) {
-				// invalid
+		if (isTrainer) {
+			int errorId = 0;
+			if (!this.customFrom.isValid() || !this.customTo.isValid() || !this.customIncrement.isValid()) {
 				ok = false;
-				customFrom.setBackgroundColor(bgcolorErr);
-				customTo.setBackgroundColor(bgcolorOK);
+			} else if (this.customFrom.getValue() >= this.customTo.getValue()) {
+				errorId = R.string.transport_mode_dlg_trainer_error_range;
+			} else if (this.customIncrement.getValue() > (this.customTo.getValue() - this.customFrom.getValue())) {
+				errorId = R.string.transport_mode_dlg_trainer_error_increment;
 			}
-		} else if (parent.equals(customTo)) {
-			if ((int) customTo.getSelectedItem() <= (int) customFrom.getSelectedItem()) {
-				// invalid
-				ok = false;
-				customTo.setBackgroundColor(bgcolorErr);
-				customFrom.setBackgroundColor(bgcolorOK);
-			}
+			ok = (ok && errorId == 0);
+			this.showError(this.customError, errorId);
+		} else {
+			ok = this.simplePercent.isValid();
+			this.showError(this.customError, 0);
 		}
-		if (ok) {
-			customTo.setBackgroundColor(bgcolorOK);
-			customFrom.setBackgroundColor(bgcolorOK);
-			if ((int) customIncrement.getSelectedItem() > ((int) customTo.getSelectedItem() - (int) customFrom.getSelectedItem())) {
+
+		if (isLoop) {
+			int errorId = 0;
+			if (!this.loopFrom.isValid() || !this.loopTo.isValid()) {
 				ok = false;
-				customIncrement.setBackgroundColor(bgcolorErr);
-			} else {
-				customIncrement.setBackgroundColor(bgcolorOK);
+			} else if (this.loopTo.getValue() < this.loopFrom.getValue()) {
+				errorId = R.string.transport_mode_dlg_loop_range_error;
 			}
+			ok = (ok && errorId == 0);
+			this.showError(this.loopError, errorId);
+		} else {
+			this.showError(this.loopError, 0);
 		}
+
+		this.updateHints(isLoop);
+
 		this.ok = ok;
 		// update menu with onPrepareOptionsMenu
 		getActivity().invalidateOptionsMenu();
+		return ok;
 	}
 
-	public Integer[] createPercentValues() {
-		int length = ((MAX_SELECTION - MIN_SELECTION) + 1);
-		Integer[] items = new Integer[length];
-		for (int i = 0; i < length; i++) {
-			items[i] = i + 1;
+	private void updateHints(boolean isLoop) {
+		// tempo of the measure where playback starts, used to show percentages as BPM
+		int startMeasure = (isLoop && this.loopFrom.isValid() ? this.loopFrom.getValue() : 1);
+		int baseTempo = getSong().getMeasureHeader(startMeasure - 1).getTempo().getQuarterValue();
+
+		this.simplePercentHint.setText(this.getTempoHint(baseTempo, this.simplePercent.getValue()));
+		this.customFromHint.setText(this.getTempoHint(baseTempo, this.customFrom.getValue()));
+		this.customToHint.setText(this.getTempoHint(baseTempo, this.customTo.getValue()));
+		this.customIncrementHint.setText(getActivity().getString(R.string.transport_mode_dlg_trainer_tempo_increment_hint,
+				this.customIncrement.getValue(), Math.round(baseTempo * this.customIncrement.getValue() / 100f)));
+
+		this.setHint(this.loopFromHint, this.getMarkerTitle(this.loopFrom.getValue()));
+		String toHint = this.getMarkerTitle(this.loopTo.getValue());
+		if (this.loopTo.getValue() == this.measureCount) {
+			String endHint = getActivity().getString(R.string.transport_mode_dlg_loop_range_end_hint);
+			toHint = (toHint != null ? (toHint + " · " + endHint) : endHint);
 		}
-		return items;
+		this.setHint(this.loopToHint, toHint);
 	}
 
-	public List<String> createLoopFromValues() {
-		List<String> items = new ArrayList<String>();
-		items.add(getActivity().getString(R.string.transport_mode_dlg_loop_range_from_default));	// from the beginning
-		for (int i = 1; i <= MidiPlayer.getInstance(findContext()).getSong().countMeasureHeaders(); i++) {
-			items.add(getItemText(i));
+	private String getTempoHint(int baseTempo, int percent) {
+		return getActivity().getString(R.string.transport_mode_dlg_tempo_bpm_hint, percent, Math.round(baseTempo * percent / 100f));
+	}
+
+	private String getMarkerTitle(int measure) {
+		if (measure < 1 || measure > this.measureCount) {
+			return null;
 		}
-		return items;
+		TGMeasureHeader header = getSong().getMeasureHeader(measure - 1);
+		return (header.hasMarker() ? header.getMarker().getTitle() : null);
 	}
 
-	public List<String> createLoopToValuesFrom(Integer firstMeasure) {
-		List<String> items = new ArrayList<String>();
-		items.add(getActivity().getString(R.string.transport_mode_dlg_loop_range_to_default));		// to the end
-		for (int i = firstMeasure; i <= MidiPlayer.getInstance(findContext()).getSong().countMeasureHeaders(); i++) {
-			items.add(getItemText(i));
+	private void setHint(TextView hint, String text) {
+		hint.setText(text);
+		hint.setVisibility(text != null ? View.VISIBLE : View.GONE);
+	}
+
+	private void showError(TextView error, int errorId) {
+		if (errorId != 0) {
+			error.setText(errorId);
+			error.setVisibility(View.VISIBLE);
+		} else {
+			error.setVisibility(View.GONE);
 		}
-		return items;
 	}
 
-	private String getItemText(Integer i) {
-		TGMeasureHeader header = MidiPlayer.getInstance(findContext()).getSong().getMeasureHeader(i - 1);
-		String text = "#" + i;
-		if( header.hasMarker() ){
-			text += (" (" + header.getMarker().getTitle() + ")");
-		}
-		return text;
+	private int getCaretMeasureNumber() {
+		return TGSongViewController.getInstance(findContext()).getCaret().getMeasure().getNumber();
 	}
 
-	private Integer getMeasureNb (Spinner loopSpinner) {
-		return Integer.parseInt(loopSpinner.getSelectedItem().toString().replaceAll("#(\\d+) ?.*","$1"));
+	private TGSong getSong() {
+		return MidiPlayer.getInstance(findContext()).getSong();
 	}
 
 	private void enableTrainerMode(boolean isTrainer) {
 		this.simpleLabel.setEnabled(!isTrainer);
 		this.simplePercentLabel.setEnabled(!isTrainer);
 		this.simplePercent.setEnabled(!isTrainer);
+		this.simplePercentHint.setEnabled(!isTrainer);
 		this.simpleLoop.setEnabled(!isTrainer);
 
 		this.customLabel.setEnabled(isTrainer);
 		this.customFromLabel.setEnabled(isTrainer);
 		this.customFrom.setEnabled(isTrainer);
+		this.customFromHint.setEnabled(isTrainer);
 		this.customToLabel.setEnabled(isTrainer);
 		this.customTo.setEnabled(isTrainer);
+		this.customToHint.setEnabled(isTrainer);
 		this.customIncrementLabel.setEnabled(isTrainer);
 		this.customIncrement.setEnabled(isTrainer);
+		this.customIncrementHint.setEnabled(isTrainer);
+		for (View preset : this.customIncrementPresets) {
+			preset.setEnabled(isTrainer);
+		}
 	}
 
 	private void enableLoop(boolean enable) {
 		this.loopLabel.setEnabled(enable);
 		this.loopFromLabel.setEnabled(enable);
 		this.loopFrom.setEnabled(enable);
+		this.loopFromCurrent.setEnabled(enable);
+		this.loopFromHint.setEnabled(enable);
 		this.loopToLabel.setEnabled(enable);
 		this.loopTo.setEnabled(enable);
+		this.loopToCurrent.setEnabled(enable);
+		this.loopToHint.setEnabled(enable);
 	}
 }

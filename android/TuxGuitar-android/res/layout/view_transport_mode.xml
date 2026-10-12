@@ -4,121 +4,297 @@
     android:layout_height="match_parent"
 	style="?attr/dialogStyle">
 
-	<GridLayout
-		android:layout_width="fill_parent"
+	<LinearLayout
+		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:columnCount="2" >
+		android:orientation="vertical" >
 
 		<RadioGroup
 			android:id="@+id/transport_mode_dlg_mode"
-			android:layout_columnSpan="2"
-			android:layout_gravity="fill_horizontal|center_vertical" >
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" >
 
 			<RadioButton
 				android:id="@+id/transport_mode_dlg_simple"
 				android:text="@string/transport_mode_dlg_simple"
-				android:layout_width="fill_parent"
+				android:minHeight="48dp"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content" />
 
 			<RadioButton
 				android:id="@+id/transport_mode_dlg_trainer"
 				android:text="@string/transport_mode_dlg_trainer"
-				android:layout_width="fill_parent"
+				android:minHeight="48dp"
+				android:layout_width="match_parent"
 				android:layout_height="wrap_content" />
 		</RadioGroup>
 
 		<Space
-			android:layout_gravity="fill"
-			android:layout_columnSpan="2"
+			android:layout_width="match_parent"
 			style="?attr/dialogVerticalSpacerStyle" />
+
+		<!-- ====== Simple mode ====== -->
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_simple_label"
 			android:text="@string/transport_mode_dlg_simple"
-			android:layout_columnSpan="2"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:textStyle="bold"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_simple_tempo_percent_label"
 			android:text="@string/transport_mode_dlg_simple_tempo_percent_label"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:layout_marginTop="8dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
-		<Spinner
-			android:id="@+id/transport_mode_dlg_simple_tempo_percent_value"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical" >
+
+			<include
+				android:id="@+id/transport_mode_dlg_simple_tempo_percent_value"
+				layout="@layout/view_number_stepper" />
+
+			<TextView
+				android:id="@+id/transport_mode_dlg_simple_tempo_percent_hint"
+				android:layout_marginStart="12dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
 
 		<CheckBox
 			android:id="@+id/transport_mode_dlg_simple_loop"
 			android:text="@string/transport_mode_dlg_simple_loop"
-			android:layout_gravity="fill_horizontal|center_vertical"
-			android:layout_columnSpan="2" />
+			android:minHeight="48dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
 		<Space
-			android:layout_gravity="fill"
-			android:layout_columnSpan="2"
+			android:layout_width="match_parent"
 			style="?attr/dialogVerticalSpacerStyle" />
+
+		<!-- ====== Training mode ====== -->
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_trainer_label"
 			android:text="@string/transport_mode_dlg_trainer"
-			android:layout_columnSpan="2"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:textStyle="bold"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_trainer_tempo_percent_from_label"
 			android:text="@string/transport_mode_dlg_trainer_tempo_percent_from_label"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:layout_marginTop="8dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
-		<Spinner
-			android:id="@+id/transport_mode_dlg_trainer_tempo_percent_from_value"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical" >
+
+			<include
+				android:id="@+id/transport_mode_dlg_trainer_tempo_percent_from_value"
+				layout="@layout/view_number_stepper" />
+
+			<TextView
+				android:id="@+id/transport_mode_dlg_trainer_tempo_percent_from_hint"
+				android:layout_marginStart="12dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_trainer_tempo_percent_to_label"
 			android:text="@string/transport_mode_dlg_trainer_tempo_percent_to_label"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:layout_marginTop="8dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
-		<Spinner
-			android:id="@+id/transport_mode_dlg_trainer_tempo_percent_to_value"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical" >
+
+			<include
+				android:id="@+id/transport_mode_dlg_trainer_tempo_percent_to_value"
+				layout="@layout/view_number_stepper" />
+
+			<TextView
+				android:id="@+id/transport_mode_dlg_trainer_tempo_percent_to_hint"
+				android:layout_marginStart="12dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_trainer_tempo_increment_label"
 			android:text="@string/transport_mode_dlg_trainer_tempo_increment_label"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:layout_marginTop="8dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
-		<Spinner
-			android:id="@+id/transport_mode_dlg_trainer_tempo_increment_value"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical" >
+
+			<include
+				android:id="@+id/transport_mode_dlg_trainer_tempo_increment_value"
+				layout="@layout/view_number_stepper" />
+
+			<TextView
+				android:id="@+id/transport_mode_dlg_trainer_tempo_increment_hint"
+				android:layout_marginStart="12dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/transport_mode_dlg_trainer_tempo_increment_presets"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal" >
+
+			<Button
+				android:id="@+id/transport_mode_dlg_trainer_tempo_increment_preset_1"
+				android:text="@string/transport_mode_dlg_trainer_tempo_increment_preset_1"
+				android:minHeight="48dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+
+			<Button
+				android:id="@+id/transport_mode_dlg_trainer_tempo_increment_preset_2"
+				android:text="@string/transport_mode_dlg_trainer_tempo_increment_preset_2"
+				android:minHeight="48dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+
+			<Button
+				android:id="@+id/transport_mode_dlg_trainer_tempo_increment_preset_5"
+				android:text="@string/transport_mode_dlg_trainer_tempo_increment_preset_5"
+				android:minHeight="48dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+
+			<Button
+				android:id="@+id/transport_mode_dlg_trainer_tempo_increment_preset_10"
+				android:text="@string/transport_mode_dlg_trainer_tempo_increment_preset_10"
+				android:minHeight="48dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/transport_mode_dlg_trainer_error"
+			android:textColor="@android:color/holo_red_dark"
+			android:visibility="gone"
+			android:layout_marginTop="4dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
 		<Space
-			android:layout_gravity="fill"
-			android:layout_columnSpan="2"
+			android:layout_width="match_parent"
 			style="?attr/dialogVerticalSpacerStyle" />
+
+		<!-- ====== Loop range ====== -->
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_loop_range_label"
 			android:text="@string/transport_mode_dlg_loop_range_label"
-			android:layout_columnSpan="2"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:textStyle="bold"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_loop_range_from_label"
 			android:text="@string/transport_mode_dlg_loop_range_from_label"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:layout_marginTop="8dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
-		<Spinner
-			android:id="@+id/transport_mode_dlg_loop_range_from_value"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical" >
+
+			<include
+				android:id="@+id/transport_mode_dlg_loop_range_from_value"
+				layout="@layout/view_number_stepper" />
+
+			<Button
+				android:id="@+id/transport_mode_dlg_loop_range_from_current"
+				android:text="@string/transport_mode_dlg_loop_range_current_measure"
+				android:minHeight="48dp"
+				android:layout_marginStart="8dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/transport_mode_dlg_loop_range_from_hint"
+			android:visibility="gone"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
 		<TextView
 			android:id="@+id/transport_mode_dlg_loop_range_to_label"
 			android:text="@string/transport_mode_dlg_loop_range_to_label"
-			android:layout_gravity="fill_horizontal|center_vertical" />
+			android:layout_marginTop="8dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
 
-		<Spinner
-			android:id="@+id/transport_mode_dlg_loop_range_to_value"
-			android:layout_gravity="fill_horizontal|center_vertical" />
-	</GridLayout>
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="horizontal"
+			android:gravity="center_vertical" >
+
+			<include
+				android:id="@+id/transport_mode_dlg_loop_range_to_value"
+				layout="@layout/view_number_stepper" />
+
+			<Button
+				android:id="@+id/transport_mode_dlg_loop_range_to_current"
+				android:text="@string/transport_mode_dlg_loop_range_current_measure"
+				android:minHeight="48dp"
+				android:layout_marginStart="8dp"
+				android:layout_width="0dp"
+				android:layout_weight="1"
+				android:layout_height="wrap_content" />
+		</LinearLayout>
+
+		<TextView
+			android:id="@+id/transport_mode_dlg_loop_range_to_hint"
+			android:visibility="gone"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
+
+		<TextView
+			android:id="@+id/transport_mode_dlg_loop_range_error"
+			android:textColor="@android:color/holo_red_dark"
+			android:visibility="gone"
+			android:layout_marginTop="4dp"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content" />
+	</LinearLayout>
 
 </ScrollView>
