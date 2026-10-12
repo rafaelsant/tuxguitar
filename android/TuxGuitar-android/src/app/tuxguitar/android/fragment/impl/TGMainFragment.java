@@ -37,6 +37,14 @@ public class TGMainFragment extends TGCachedFragment {
 		// without the animation the space of the action bar is released right away
 		this.findActivity().getSupportActionBar().setShowHideAnimationEnabled(false);
 		this.findActivity().getSupportActionBar().hide();
+		// and again once the screens are swapped, in case the previous one restored it afterwards
+		this.getView().post(new Runnable() {
+			public void run() {
+				if( findActivity() != null ) {
+					findActivity().getSupportActionBar().hide();
+				}
+			}
+		});
 	}
 
 	@Override
