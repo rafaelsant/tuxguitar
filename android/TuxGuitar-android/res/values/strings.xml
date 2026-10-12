@@ -338,6 +338,13 @@
 	<string name="track_tuning_dlg_preset_select_value">-- Presets --</string>
 	<string name="track_tuning_dlg_error_title">Error</string>
 	<string name="track_tuning_dlg_range_error">String count must be between %1$d and %2$d</string>
+	<string name="track_tuning_dlg_strings_label">Strings (highest first)</string>
+	<string name="track_tuning_dlg_add_string">Add string</string>
+	<string name="track_tuning_dlg_remove_string">Remove string %1$d</string>
+	<string name="track_tuning_dlg_preset_label">Preset</string>
+	<string name="track_tuning_dlg_offset_label">Offset</string>
+	<string name="track_tuning_dlg_semitone_down">Semitone down</string>
+	<string name="track_tuning_dlg_semitone_up">Semitone up</string>
 
 	<string name="track_string_count_dlg_title">Line Count</string>
 	<string name="track_string_count_dlg_count_label">Line Count:</string>
