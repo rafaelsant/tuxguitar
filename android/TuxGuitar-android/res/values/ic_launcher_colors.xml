@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- behind the launcher icon artwork, matching its dark edges -->
+	<color name="ic_launcher_background">#141228</color>
+</resources>
