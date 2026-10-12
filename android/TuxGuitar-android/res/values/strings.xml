@@ -180,6 +180,22 @@
 	<string name="channel_list_channels">Channels</string>
 	<string name="channel_list_empty">No instruments yet. Tap + to add one.</string>
 
+	<string name="tuner_title">Tuner</string>
+	<string name="tuner_tuning_of">Tuning of %1$s</string>
+	<string name="tuner_standard_tuning">Standard tuning</string>
+	<string name="tuner_play_string">Play a string</string>
+	<string name="tuner_in_tune">In tune</string>
+	<string name="tuner_tune_up">Tune up</string>
+	<string name="tuner_tune_down">Tune down</string>
+	<string name="tuner_cents">%1$s cents</string>
+	<string name="tuner_auto">Auto</string>
+	<string name="tuner_reference">Reference note</string>
+	<string name="tuner_string_description">String %1$s</string>
+	<string name="tuner_permission_message">The tuner listens to your instrument through the microphone.</string>
+	<string name="tuner_permission_button">Allow microphone</string>
+	<string name="tuner_permission_settings">Open app settings</string>
+	<string name="tuner_microphone_error">The microphone could not be opened.</string>
+
 	<string name="action_track_tuning_list_item_edit">Edit</string>
 	<string name="action_track_tuning_list_item_remove">Remove</string>
 

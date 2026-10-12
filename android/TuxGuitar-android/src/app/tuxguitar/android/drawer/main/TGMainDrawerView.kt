@@ -48,6 +48,7 @@ import app.tuxguitar.android.action.impl.track.TGGoToTrackAction
 import app.tuxguitar.android.activity.TGActivity
 import app.tuxguitar.android.application.TGApplicationUtil
 import app.tuxguitar.android.fragment.impl.TGChannelListFragmentController
+import app.tuxguitar.android.fragment.impl.openTuner
 import app.tuxguitar.android.storage.recent.TGRecentFile
 import app.tuxguitar.android.storage.recent.TGRecentFiles
 import app.tuxguitar.android.storage.saf.TGSafActionHandler

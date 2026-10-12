@@ -1,5 +1,6 @@
 package app.tuxguitar.android.view.main
 
+import app.tuxguitar.android.fragment.impl.openTuner
 import android.view.Menu
 import android.view.View
 import android.widget.Toast
@@ -188,8 +189,9 @@ private class RootEntry(
 private fun rootEntries(mode: TGAppMode, context: TGContext, activity: TGActivity): List<RootEntry> {
 	val view = RootEntry(R.string.action_menu_view, { TGViewMenu(it) })
 	val settings = RootEntry(R.string.action_menu_settings, run = { openSettings(context, activity) })
+	val tuner = RootEntry(R.string.tuner_title, run = { openTuner(context, activity) })
 	if (mode != TGAppMode.EDIT) {
-		return listOf(view, settings)
+		return listOf(tuner, view, settings)
 	}
 	return listOf(
 		RootEntry(R.string.action_menu_edit, { TGEditMenu(it) }),
@@ -205,6 +207,7 @@ private fun rootEntries(mode: TGAppMode, context: TGContext, activity: TGActivit
 		)),
 		RootEntry(R.string.action_menu_transport, { TGTransportMenu(it) }),
 		RootEntry(R.string.main_edit_song_tempo, run = { openTempoDialog(context, activity) }),
+		tuner,
 		settings,
 	)
 }
