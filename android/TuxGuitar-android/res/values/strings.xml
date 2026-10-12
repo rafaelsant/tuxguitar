@@ -492,10 +492,6 @@
 
 	<string name="transport_mode_dlg_tempo_bpm_hint">%1$d%% ≈ %2$d BPM</string>
 	<string name="transport_mode_dlg_trainer_tempo_increment_hint">+%1$d%% per loop ≈ +%2$d BPM</string>
-	<string name="transport_mode_dlg_trainer_tempo_increment_preset_1" formatted="false">+1%</string>
-	<string name="transport_mode_dlg_trainer_tempo_increment_preset_2" formatted="false">+2%</string>
-	<string name="transport_mode_dlg_trainer_tempo_increment_preset_5" formatted="false">+5%</string>
-	<string name="transport_mode_dlg_trainer_tempo_increment_preset_10" formatted="false">+10%</string>
 	<string name="transport_mode_dlg_trainer_error_range">The final tempo must be higher than the initial tempo.</string>
 	<string name="transport_mode_dlg_trainer_error_increment">The increment must not be larger than the difference between the final and the initial tempo.</string>
 	<string name="transport_mode_dlg_loop_range_current_measure">Current measure</string>
@@ -503,8 +499,6 @@
 	<string name="transport_mode_dlg_loop_range_error">The last measure must not be before the first measure.</string>
 
 	<!-- Number stepper -->
-	<string name="number_stepper_decrease">−</string>
-	<string name="number_stepper_increase">+</string>
 	<string name="number_stepper_decrease_description">Decrease</string>
 	<string name="number_stepper_increase_description">Increase</string>
 	<string name="number_stepper_error_range">Enter a value from %1$d to %2$d</string>

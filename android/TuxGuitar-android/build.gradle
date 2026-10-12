@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
 
@@ -9,6 +11,10 @@ android {
 	compileOptions {
 		sourceCompatibility JavaVersion.VERSION_1_9
 		targetCompatibility JavaVersion.VERSION_1_9
+	}
+
+	buildFeatures {
+		compose true
 	}
 
 	defaultConfig {
@@ -39,10 +45,25 @@ android {
 	}
 }
 
+kotlin {
+	compilerOptions {
+		jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_9)
+	}
+}
+
 dependencies {
 	implementation fileTree(include: ['*.jar'], dir: 'libs')
 	implementation 'androidx.multidex:multidex:2.0.1'
-	implementation 'androidx.appcompat:appcompat:1.0.0'
+	// 1.3+ is required for Compose: it attaches the lifecycle owners Compose needs to the activity window
+	implementation 'androidx.appcompat:appcompat:1.7.0'
+
+	// Jetpack Compose, used by the screens migrated from XML layouts
+	implementation platform('androidx.compose:compose-bom:2024.12.01')
+	implementation 'androidx.compose.ui:ui'
+	implementation 'androidx.compose.foundation:foundation'
+	implementation 'androidx.compose.material3:material3'
+	implementation 'androidx.compose.ui:ui-tooling-preview'
+	debugImplementation 'androidx.compose.ui:ui-tooling'
 	implementation 'androidx.preference:preference:1.1.0'
 	implementation 'com.google.android.material:material:1.1.0'
 	implementation 'org.apache.commons:commons-compress:1.26.0'
