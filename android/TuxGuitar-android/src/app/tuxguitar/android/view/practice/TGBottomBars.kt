@@ -8,6 +8,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -509,7 +510,7 @@ private fun BarSheet(
 			.fillMaxWidth()
 			.nestedScroll(nestedScroll)
 			// the offset is the visible height: dragging up makes it grow
-			.anchoredDraggable(state, Orientation.Vertical, reverseDirection = true),
+			.anchoredDraggable(state = state, reverseDirection = true, orientation = Orientation.Vertical),
 	) {
 		Box(
 			modifier = Modifier
