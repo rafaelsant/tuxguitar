@@ -4,6 +4,9 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.height
@@ -51,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -142,12 +146,18 @@ private fun PlayBar(
 	onStop: () -> Unit,
 	onLoopChange: (Boolean) -> Unit,
 ) {
-	BarSheet {
+	var level by rememberSaveable { mutableStateOf(LEVEL_TILES) }
+	val bpm = TGTempoMath.bpm(snapshot.baseTempo, if (snapshot.running) snapshot.currentPercent else 100)
+	BarSheet(level = level, maxLevel = LEVEL_TILES, onLevelChange = { level = it }) {
+		if (level == LEVEL_MINI) {
+			MiniRow(snapshot.running, onPlayPause, stringResource(R.string.practice_bpm_value, bpm), null)
+			return@BarSheet
+		}
 		Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
 			// plain text, not a tile: it is not a control
 			Column(modifier = Modifier.width(TILE_SIZE), horizontalAlignment = Alignment.CenterHorizontally) {
 				Text(
-					TGTempoMath.bpm(snapshot.baseTempo, if (snapshot.running) snapshot.currentPercent else 100).toString(),
+					bpm.toString(),
 					fontSize = 24.sp,
 					fontWeight = FontWeight.Bold,
 				)
@@ -171,10 +181,21 @@ private fun PracticeBar(
 	onMetronome: () -> Unit,
 	onCountIn: () -> Unit,
 ) {
-	var expanded by rememberSaveable { mutableStateOf(false) }
+	var level by rememberSaveable { mutableStateOf(LEVEL_TILES) }
+	val expanded = level == LEVEL_OPTIONS
 	val base = snapshot.baseTempo
 
-	BarSheet(expanded = expanded, onExpandedChange = { expanded = it }) {
+	BarSheet(level = level, maxLevel = LEVEL_OPTIONS, onLevelChange = { level = it }) {
+		if (level == LEVEL_MINI) {
+			val sounding = if (snapshot.running) snapshot.currentPercent else if (settings.training) settings.fromPercent else settings.fixedPercent
+			val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
+			MiniRow(
+				snapshot.running, onPlayPause,
+				stringResource(R.string.practice_bpm_value, TGTempoMath.bpm(base, sounding)),
+				if (settings.training) stringResource(R.string.practice_training_step, step.first, step.second) else null,
+			)
+			return@BarSheet
+		}
 		if (settings.training) {
 			val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
 			Row(verticalAlignment = Alignment.CenterVertically) {
@@ -217,7 +238,7 @@ private fun PracticeBar(
 				value = TGTempoMath.bpm(base, sounding).toString(),
 				label = if (pending) stringResource(R.string.practice_next_speed, fixedBpm) else stringResource(R.string.practice_bpm_unit),
 				checked = expanded || pending,
-				onClick = { expanded = !expanded },
+				onClick = { level = if (expanded) LEVEL_TILES else LEVEL_OPTIONS },
 			)
 			if (!settings.training) {
 				TextTile("+5", stringResource(R.string.practice_faster), showLabel = false) { stepFixed(5) }
@@ -246,7 +267,7 @@ private fun PracticeBar(
 					text = if (start <= 1 && end >= snapshot.measureCount) stringResource(R.string.practice_whole_song_short) else "$start–$end",
 					label = stringResource(R.string.practice_section),
 					modifier = Modifier.weight(1.4f).height(TILE_SIZE),
-					onClick = { expanded = true },
+					onClick = { level = LEVEL_OPTIONS },
 				)
 			}
 		}
@@ -399,40 +420,75 @@ private val TILE_SPACING = 10.dp
 private val TILE_SHAPE = RoundedCornerShape(16.dp)
 private val LABEL_SIZE = 12.sp
 
-/** Rounded sheet with a handle; tapping the handle expands or collapses it (when expandable). */
+/** Sheet sizes: a thin row, the tiles, the tiles and the options. */
+private const val LEVEL_MINI = 0
+private const val LEVEL_TILES = 1
+private const val LEVEL_OPTIONS = 2
+
+/**
+ * Rounded sheet with a handle. Dragging the sheet up or down moves one size at a time (down to a thin row to leave
+ * more room for the score); tapping the handle also moves up, and from the top size back to the tiles.
+ */
 @Composable
 private fun BarSheet(
-	expanded: Boolean = false,
-	onExpandedChange: ((Boolean) -> Unit)? = null,
+	level: Int,
+	maxLevel: Int,
+	onLevelChange: (Int) -> Unit,
 	content: @Composable ColumnScope.() -> Unit,
 ) {
+	var dragged by remember { mutableStateOf(0f) }
+	val threshold = with(LocalDensity.current) { 32.dp.toPx() }
 	Surface(
 		shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
 		tonalElevation = 3.dp,
-		modifier = Modifier.fillMaxWidth(),
+		modifier = Modifier
+			.fillMaxWidth()
+			.draggable(
+				orientation = Orientation.Vertical,
+				state = rememberDraggableState { dragged += it },
+				onDragStarted = { dragged = 0f },
+				onDragStopped = {
+					if (dragged < -threshold) onLevelChange((level + 1).coerceAtMost(maxLevel))
+					else if (dragged > threshold) onLevelChange((level - 1).coerceAtLeast(LEVEL_MINI))
+				},
+			),
 	) {
-		Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
-			// tap only: a drag here was caught by mistake when scrolling the score up from its bottom edge
-			val handleModifier = if (onExpandedChange == null) Modifier else {
-				Modifier.clickable(onClickLabel = stringResource(if (expanded) R.string.practice_collapse else R.string.practice_expand)) {
-					onExpandedChange(!expanded)
-				}
-			}
+		Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = if (level == LEVEL_MINI) 4.dp else 12.dp)) {
 			Box(
-				modifier = handleModifier.fillMaxWidth().height(if (onExpandedChange == null) 12.dp else 24.dp),
+				modifier = Modifier
+					.fillMaxWidth()
+					.height(24.dp)
+					.clickable(onClickLabel = stringResource(R.string.practice_expand)) {
+						onLevelChange(if (level < maxLevel) level + 1 else LEVEL_TILES)
+					},
 				contentAlignment = Alignment.Center,
 			) {
-				if (onExpandedChange != null) {
-					Box(
-						Modifier
-							.width(40.dp)
-							.height(4.dp)
-							.clip(RoundedCornerShape(2.dp))
-							.background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
-					)
-				}
+				Box(
+					Modifier
+						.width(40.dp)
+						.height(4.dp)
+						.clip(RoundedCornerShape(2.dp))
+						.background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
+				)
 			}
 			content()
+		}
+	}
+}
+
+/** The thin size of the sheet: play / pause, the BPM and, in training, the loop count. */
+@Composable
+private fun MiniRow(running: Boolean, onPlayPause: () -> Unit, bpm: String, detail: String?) {
+	Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+		FilledIconButton(onClick = onPlayPause, modifier = Modifier.size(40.dp)) {
+			Icon(
+				painterResource(if (running) R.drawable.ic_bar_pause_24dp else R.drawable.ic_bar_play_24dp),
+				stringResource(if (running) R.string.practice_pause else R.string.practice_play),
+			)
+		}
+		Text(bpm, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+		if (detail != null) {
+			Text(detail, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
 		}
 	}
 }

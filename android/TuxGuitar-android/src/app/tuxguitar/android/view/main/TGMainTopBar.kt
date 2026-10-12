@@ -28,7 +28,12 @@ import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,7 +100,18 @@ private fun MainTopBar(context: TGContext) {
 		}
 	}
 
-	Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+	// the status bar (and the notch area around it) takes the color of the bar, so no band is left between them
+	val barColor = MaterialTheme.colorScheme.surfaceContainer
+	val darkIcons = !isSystemInDarkTheme()
+	SideEffect {
+		activity?.let {
+			it.window.statusBarColor = barColor.toArgb()
+			(it.findViewById<View>(R.id.root_layout) as? DrawerLayout)?.setStatusBarBackgroundColor(barColor.toArgb())
+			WindowCompat.getInsetsController(it.window, it.window.decorView).isAppearanceLightStatusBars = darkIcons
+		}
+	}
+
+	Surface(color = barColor, modifier = Modifier.fillMaxWidth()) {
 		Row(
 			modifier = Modifier.height(56.dp).padding(horizontal = 4.dp),
 			verticalAlignment = Alignment.CenterVertically,
