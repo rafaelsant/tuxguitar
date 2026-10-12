@@ -89,13 +89,8 @@ abstract class TGComposeModalFragment(private val titleId: Int) : TGModalFragmen
 		}
 	}
 
-	// posted: when screens are swapped, this runs after the previous one restored the action bar
 	override fun onShowView() {
-		this.view?.post { this.findActivity()?.supportActionBar?.hide() }
-	}
-
-	override fun onHideView() {
-		this.findActivity()?.supportActionBar?.show()
+		this.findActivity()?.setLegacyActionBarVisible(false)
 	}
 }
 

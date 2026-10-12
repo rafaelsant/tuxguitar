@@ -144,6 +144,7 @@ class TGTunerFragment : Fragment() {
 
 	private var track: TGTrack? = null
 	private var audio: TGTunerAudio? = null
+	private var audioSession = 0
 	private val history = ArrayDeque<Double>()
 	private var silentFrames = 0
 	private var ignoreUntil = 0L
@@ -182,7 +183,7 @@ class TGTunerFragment : Fragment() {
 
 	override fun onResume() {
 		super.onResume()
-		view?.post { tgActivity.supportActionBar?.hide() }
+		tgActivity.setLegacyActionBarVisible(false)
 		// the song playing would be heard by the microphone
 		if (MidiPlayer.getInstance(tgContext).isRunning) {
 			TGActionProcessor(tgContext, TGTransportStopAction.NAME).process()
@@ -200,11 +201,6 @@ class TGTunerFragment : Fragment() {
 	override fun onPause() {
 		stopAudio()
 		super.onPause()
-	}
-
-	override fun onDestroyView() {
-		(activity as? TGActivity)?.supportActionBar?.show()
-		super.onDestroyView()
 	}
 
 	private fun loadTuning() {
@@ -228,7 +224,11 @@ class TGTunerFragment : Fragment() {
 		if (audio?.isRunning == true) {
 			return
 		}
-		val audio = TGTunerAudio(requireContext().applicationContext) { pitch -> mainHandler.post { onPitch(pitch) } }
+		// readings still arriving from a stopped microphone are dropped
+		val session = ++audioSession
+		val audio = TGTunerAudio(requireContext().applicationContext) { pitch ->
+			mainHandler.post { if (session == audioSession) onPitch(pitch) }
+		}
 		microphoneError = !audio.start()
 		this.audio = audio
 	}
@@ -236,6 +236,7 @@ class TGTunerFragment : Fragment() {
 	private fun stopAudio() {
 		audio?.stop()
 		audio = null
+		audioSession++
 		mainHandler.removeCallbacksAndMessages(null)
 		history.clear()
 		reading = null

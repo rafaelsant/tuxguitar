@@ -99,13 +99,8 @@ class TGChannelListFragment : TGCachedFragment(R.layout.view_compose_modal) {
 		}
 	}
 
-	// posted: when screens are swapped, this runs after the previous one restored the action bar
 	override fun onShowView() {
-		view?.post { findActivity()?.supportActionBar?.hide() }
-	}
-
-	override fun onHideView() {
-		findActivity()?.supportActionBar?.show()
+		findActivity()?.setLegacyActionBarVisible(false)
 	}
 
 	@Composable

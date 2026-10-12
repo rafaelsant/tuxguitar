@@ -54,9 +54,9 @@ class TGTunerAudio(private val context: Context, private val onPitch: (Float) ->
 		return true
 	}
 
+	/** Stops listening without waiting: the reading thread ends after its current read and releases the microphone. */
 	fun stop() {
 		running = false
-		thread?.join(500)
 		thread = null
 	}
 

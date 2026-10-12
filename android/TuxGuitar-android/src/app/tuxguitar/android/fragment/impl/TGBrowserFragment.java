@@ -20,6 +20,17 @@ public class TGBrowserFragment extends TGCachedFragment {
 		this.createActionBar(true, false, null);
 	}
 
+	// no top bar of its own: the action bar is shown on this screen only
+	@Override
+	public void onShowView() {
+		this.findActivity().setLegacyActionBarVisible(true);
+	}
+
+	@Override
+	public void onHideView() {
+		this.findActivity().setLegacyActionBarVisible(false);
+	}
+
 	@Override
 	public void onPostCreateOptionsMenu(Menu menu, MenuInflater menuInflater) {
 		TGBrowserMenu.getInstance(this.findContext()).inflate(menu, menuInflater);

@@ -30,6 +30,17 @@ public class TGBrowserSettingsDialog extends TGModalFragment {
 		this.createActionBar(true, false, R.string.browser_settings_fs_dlg_title);
 	}
 
+	// part of the file browser, which still uses the action bar
+	@Override
+	public void onShowView() {
+		this.findActivity().setLegacyActionBarVisible(true);
+	}
+
+	@Override
+	public void onHideView() {
+		this.findActivity().setLegacyActionBarVisible(false);
+	}
+
 	@Override
 	public void onCreateOptionsMenu(Menu menu, MenuInflater menuInflater) {
 		menuInflater.inflate(R.menu.menu_modal_fragment_ok, menu);

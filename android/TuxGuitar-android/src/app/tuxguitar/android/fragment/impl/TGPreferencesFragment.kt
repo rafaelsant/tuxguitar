@@ -39,6 +39,7 @@ import app.tuxguitar.android.properties.TGSharedPreferencesUtil
 import app.tuxguitar.android.storage.TGStorageProperties
 import app.tuxguitar.android.transport.TGTransportProperties
 import app.tuxguitar.android.view.compose.TGComposeTheme
+import app.tuxguitar.android.view.compose.TGScreenTopBar
 import app.tuxguitar.editor.action.TGActionProcessor
 import app.tuxguitar.player.base.MidiPlayer
 import app.tuxguitar.util.TGContext
@@ -53,16 +54,23 @@ class TGPreferencesFragment : Fragment() {
 
 	override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
 		val activity = requireActivity() as TGActivity
-		activity.supportActionBar?.setTitle(R.string.action_menu_settings)
 		return ComposeView(activity).apply {
 			setContent {
 				TGComposeTheme {
 					Surface(modifier = Modifier.fillMaxSize()) {
-						SettingsScreen(activity, activity.findContext())
+						Column {
+							TGScreenTopBar(stringResource(R.string.action_menu_settings), { activity.callBackAction() })
+							SettingsScreen(activity, activity.findContext())
+						}
 					}
 				}
 			}
 		}
+	}
+
+	override fun onResume() {
+		super.onResume()
+		(activity as? TGActivity)?.setLegacyActionBarVisible(false)
 	}
 }
 

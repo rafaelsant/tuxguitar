@@ -52,11 +52,14 @@ public class TGBrowserCollectionsDialog extends TGModalFragment {
 
 	@Override
 	public void onShowView() {
+		// part of the file browser, which still uses the action bar
+		this.findActivity().setLegacyActionBarVisible(true);
 		TGActionManager.getInstance(findContext()).addPostExecutionListener(this.eventListener);
 	}
 
 	@Override
 	public void onHideView() {
+		this.findActivity().setLegacyActionBarVisible(false);
 		TGActionManager.getInstance(findContext()).removePostExecutionListener(this.eventListener);
 	}
 

@@ -6,6 +6,9 @@
 
 	<!-- Application theme. -->
 	<style name="TGTheme" parent="AppBaseTheme">
+		<!-- the old action bar is hidden on the Compose screens (they draw their own top bar); as an overlay it
+		     leaves no empty band when hidden. Screens that still show it pad their top by its height. -->
+		<item name="windowActionBarOverlay">true</item>
 		<!-- ========================================================= -->
 		<!-- ==== COLOR ============================================== -->
 		<!-- ========================================================= -->

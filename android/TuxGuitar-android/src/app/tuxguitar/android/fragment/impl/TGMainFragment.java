@@ -31,25 +31,10 @@ public class TGMainFragment extends TGCachedFragment {
 		TGBottomBars.bind((ComposeView) this.getView().findViewById(R.id.main_bottom_bars), this.findContext());
 	}
 
-	// this screen draws its own top bar (TGMainTopBar); the other screens still use the action bar
+	// this screen draws its own top bar (TGMainTopBar)
 	@Override
 	public void onShowView() {
-		// without the animation the space of the action bar is released right away
-		this.findActivity().getSupportActionBar().setShowHideAnimationEnabled(false);
-		this.findActivity().getSupportActionBar().hide();
-		// and again once the screens are swapped, in case the previous one restored it afterwards
-		this.getView().post(new Runnable() {
-			public void run() {
-				if( findActivity() != null ) {
-					findActivity().getSupportActionBar().hide();
-				}
-			}
-		});
-	}
-
-	@Override
-	public void onHideView() {
-		this.findActivity().getSupportActionBar().show();
+		this.findActivity().setLegacyActionBarVisible(false);
 	}
 
 	@Override

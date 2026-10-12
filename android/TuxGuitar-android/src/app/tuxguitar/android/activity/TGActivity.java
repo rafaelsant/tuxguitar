@@ -64,6 +64,7 @@ import app.tuxguitar.util.TGSynchronizer;
 import app.tuxguitar.util.error.TGErrorManager;
 import app.tuxguitar.util.plugin.TGPluginManager;
 
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -204,6 +205,7 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 		this.attachInstance();
 		this.createModules();
 		this.setContentView(R.layout.activity_tg);
+		this.setLegacyActionBarVisible(false);
 
 		this.registerForContextMenu(findViewById(R.id.root_layout));
 		this.getActionBarController().setDisplayHomeAsUpEnabled(true);
@@ -292,6 +294,7 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 		this.permissionResultManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
 	}
 
@@ -424,6 +427,27 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 
 	public boolean isDestroyed() {
 		return this.destroyed;
+	}
+
+	/**
+	 * The old action bar is only shown by the screens that have no top bar of their own (the optional file
+	 * browser); the others keep it hidden.
+	 */
+	public void setLegacyActionBarVisible(boolean visible) {
+		final ActionBar actionBar = this.getSupportActionBar();
+		if( actionBar != null ) {
+			actionBar.setShowHideAnimationEnabled(false);
+			if( visible ) {
+				// posted: when screens are swapped the leaving one hides it after the new one is shown
+				this.findViewById(R.id.root_layout).post(new Runnable() {
+					public void run() {
+						actionBar.show();
+					}
+				});
+			} else {
+				actionBar.hide();
+			}
+		}
 	}
 
 	public void setDisplayOn(boolean displayOn) {
