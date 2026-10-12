@@ -10,6 +10,11 @@ Usar o TuxGuitar (editor de tablatura open source em Java, LGPL) como app Androi
 - `.github/workflows/android-gradle.yml` é do upstream (JDK 21, `assembleRelease` em todo push). **Não alterar**, para evitar conflito ao sincronizar com o upstream.
 - `.github/workflows/android-debug-apk.yml` (deste fork) gera o APK debug: roda em push para branches `android-*` e publica o artefato `tuxguitar-debug-apk` na página da execução no Actions. O APK debug usa chave de debug; se houver outro APK instalado com assinatura diferente, é preciso desinstalá-lo antes.
 
+## Textos e idiomas
+- `android/TuxGuitar-android/res/values/strings.xml` (inglês) é editado à mão.
+- `res/values-b+*/strings.xml` são gerados por `misc/messages_desktop_to_android.pl` a partir de `common/resources/lang/messages_*.properties`. Não editar à mão; strings novas sem tradução caem no inglês.
+- O idioma do app é escolhido em Configurações do Android → Apps → TuxGuitar → Idioma (Android 13+), via `res/xml/locales_config.xml`.
+
 ## O que o app já tem
 - Diálogo Transport Mode (`android/TuxGuitar-android/src/app/tuxguitar/android/view/dialog/transport/TGTransportModeDialog.java`):
   modo Simple (porcentagem de tempo de 1 a 500 e "Play looped") e modo Trainer (tempo inicial, final e incremento, em %). Loop Range por compasso (De/Até; compassos com marcador mostram o título).

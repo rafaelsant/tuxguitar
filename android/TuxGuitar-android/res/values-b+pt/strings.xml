@@ -487,7 +487,7 @@
 	<string name="transport_mode_dlg_trainer">Modo de Treinamento</string>
 	<string name="transport_mode_dlg_simple_tempo_percent_label">Percentual de tempo:</string>
 	<string name="transport_mode_dlg_simple_loop">Tocar um Loop</string>
-	<string name="transport_mode_dlg_trainer_tempo_percent_from_label">Tempo inicial:</string>
+	<!-- <string name="transport_mode_dlg_trainer_tempo_percent_from_label"></string> -->
 	<string name="transport_mode_dlg_trainer_tempo_percent_to_label">Até:</string>
 	<string name="transport_mode_dlg_trainer_tempo_increment_label">Incrementar em:</string>
 	<string name="transport_mode_dlg_loop_range_label">Tamanho do loop</string>
@@ -495,18 +495,5 @@
 	<string name="transport_mode_dlg_loop_range_from_default">Desde o início</string>
 	<string name="transport_mode_dlg_loop_range_to_label">Tocar até esse compasso:</string>
 	<string name="transport_mode_dlg_loop_range_to_default">Até o fim</string>
-
-	<string name="transport_mode_dlg_tempo_bpm_hint">%1$d%% ≈ %2$d BPM</string>
-	<string name="transport_mode_dlg_trainer_tempo_increment_hint">+%1$d%% por volta ≈ +%2$d BPM</string>
-	<string name="transport_mode_dlg_trainer_error_range">O tempo final precisa ser maior que o tempo inicial.</string>
-	<string name="transport_mode_dlg_trainer_error_increment">O incremento não pode ser maior que a diferença entre o tempo final e o inicial.</string>
-	<string name="transport_mode_dlg_loop_range_current_measure">Compasso atual</string>
-	<string name="transport_mode_dlg_loop_range_end_hint">Último compasso da música</string>
-	<string name="transport_mode_dlg_loop_range_error">O compasso final não pode vir antes do compasso inicial.</string>
-
-	<!-- Number stepper -->
-	<string name="number_stepper_decrease_description">Diminuir</string>
-	<string name="number_stepper_increase_description">Aumentar</string>
-	<string name="number_stepper_error_range">Digite um valor de %1$d a %2$d</string>
 
 </resources>
