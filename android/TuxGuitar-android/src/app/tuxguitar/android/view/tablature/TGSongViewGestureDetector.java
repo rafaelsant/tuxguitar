@@ -1,6 +1,7 @@
 package app.tuxguitar.android.view.tablature;
 
 import app.tuxguitar.android.action.impl.caret.TGMoveToAxisPositionAction;
+import app.tuxguitar.android.R;
 import app.tuxguitar.android.application.TGApplicationUtil;
 import app.tuxguitar.android.view.practice.TGAppMode;
 import app.tuxguitar.android.view.practice.TGAppModeController;
@@ -13,20 +14,25 @@ import androidx.core.view.GestureDetectorCompat;
 import android.view.GestureDetector;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
+import android.widget.OverScroller;
+import android.widget.Toast;
 
 public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureListener {
 
 	private GestureDetectorCompat gestureDetector;
 	private TGSongViewScaleGestureDetector songViewScaleGestureDetector;
 	private TGSongView songView;
+	private OverScroller scroller;
 	// measures of a loop being selected by long press and drag (practice mode), -1 when none
 	private int loopSelectionStart = -1;
 	private int loopSelectionEnd = -1;
+	private Toast loopToast;
 
 	public TGSongViewGestureDetector(Context context, TGSongView songView) {
 		this.gestureDetector = new GestureDetectorCompat(context, this);
 		this.songViewScaleGestureDetector = new TGSongViewScaleGestureDetector(context, songView);
 		this.songView = songView;
+		this.scroller = new OverScroller(context);
 	}
 
 	public boolean processTouchEvent(MotionEvent event) {
@@ -53,6 +59,7 @@ public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureLi
 				this.loopSelectionEnd = measure;
 				this.songView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
 				TGPracticeSession.getInstance(context).setLoopRange(measure, measure);
+				this.showLoopToast();
 			}
 			return;
 		}
@@ -70,6 +77,9 @@ public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureLi
 						Math.min(this.loopSelectionStart, measure), Math.max(this.loopSelectionStart, measure));
 			}
 		} else if( action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL ) {
+			if( this.loopSelectionEnd != this.loopSelectionStart ) {
+				this.showLoopToast();
+			}
 			this.loopSelectionStart = -1;
 			this.loopSelectionEnd = -1;
 		}
@@ -81,6 +91,46 @@ public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureLi
 
 		return true;
 	}
+
+	@Override
+	public boolean onDown(MotionEvent e) {
+		// a new touch stops a running fling
+		this.scroller.forceFinished(true);
+		return true;
+	}
+
+	@Override
+	public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+		if( this.songView.getController().isScrollActionAvailable() ) {
+			TGScrollAxis axisX = this.songView.getController().getScroll().getX();
+			TGScrollAxis axisY = this.songView.getController().getScroll().getY();
+			this.scroller.fling(
+					Math.round(axisX.getValue()), Math.round(axisY.getValue()),
+					axisX.isEnabled() ? Math.round(-velocityX) : 0, axisY.isEnabled() ? Math.round(-velocityY) : 0,
+					Math.round(axisX.getMinimum()), Math.round(axisX.getMaximum()),
+					Math.round(axisY.getMinimum()), Math.round(axisY.getMaximum()));
+			this.songView.postOnAnimation(this.flingStep);
+		}
+		return true;
+	}
+
+	/** Keeps scrolling after the finger leaves the screen, slowing down like any Android list. */
+	private final Runnable flingStep = new Runnable() {
+		public void run() {
+			if( scroller.computeScrollOffset() ) {
+				TGScrollAxis axisX = songView.getController().getScroll().getX();
+				TGScrollAxis axisY = songView.getController().getScroll().getY();
+				if( axisX.isEnabled() ) {
+					axisX.setValue(Math.max(Math.min(scroller.getCurrX(), axisX.getMaximum()), axisX.getMinimum()));
+				}
+				if( axisY.isEnabled() ) {
+					axisY.setValue(Math.max(Math.min(scroller.getCurrY(), axisY.getMaximum()), axisY.getMinimum()));
+				}
+				songView.redraw();
+				songView.postOnAnimation(this);
+			}
+		}
+	};
 
 	@Override
 	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
@@ -95,6 +145,19 @@ public class TGSongViewGestureDetector extends GestureDetector.SimpleOnGestureLi
 		if( axis.isEnabled() ) {
 			axis.setValue(Math.max(Math.min(axis.getValue() + distance, axis.getMaximum()), axis.getMinimum()));
 		}
+	}
+
+	private void showLoopToast() {
+		int first = Math.min(this.loopSelectionStart, this.loopSelectionEnd);
+		int last = Math.max(this.loopSelectionStart, this.loopSelectionEnd);
+		String text = (first == last
+				? this.songView.getContext().getString(R.string.practice_loop_set_one, first)
+				: this.songView.getContext().getString(R.string.practice_loop_set_range, first, last));
+		if( this.loopToast != null ) {
+			this.loopToast.cancel();
+		}
+		this.loopToast = Toast.makeText(this.songView.getContext(), text, Toast.LENGTH_SHORT);
+		this.loopToast.show();
 	}
 
 	private void moveToAxisPosition(Float x, Float y, Boolean requestSmartMenu) {

@@ -4,9 +4,6 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.height
@@ -402,7 +399,7 @@ private val TILE_SPACING = 10.dp
 private val TILE_SHAPE = RoundedCornerShape(16.dp)
 private val LABEL_SIZE = 12.sp
 
-/** Rounded sheet with a handle; tapping or dragging the handle expands or collapses it (when expandable). */
+/** Rounded sheet with a handle; tapping the handle expands or collapses it (when expandable). */
 @Composable
 private fun BarSheet(
 	expanded: Boolean = false,
@@ -415,18 +412,11 @@ private fun BarSheet(
 		modifier = Modifier.fillMaxWidth(),
 	) {
 		Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+			// tap only: a drag here was caught by mistake when scrolling the score up from its bottom edge
 			val handleModifier = if (onExpandedChange == null) Modifier else {
-				var dragged by remember { mutableStateOf(0f) }
-				Modifier
-					.clickable(onClickLabel = stringResource(if (expanded) R.string.practice_collapse else R.string.practice_expand)) {
-						onExpandedChange(!expanded)
-					}
-					.draggable(
-						orientation = Orientation.Vertical,
-						state = rememberDraggableState { dragged += it },
-						onDragStarted = { dragged = 0f },
-						onDragStopped = { if (dragged < -20f) onExpandedChange(true) else if (dragged > 20f) onExpandedChange(false) },
-					)
+				Modifier.clickable(onClickLabel = stringResource(if (expanded) R.string.practice_collapse else R.string.practice_expand)) {
+					onExpandedChange(!expanded)
+				}
 			}
 			Box(
 				modifier = handleModifier.fillMaxWidth().height(if (onExpandedChange == null) 12.dp else 24.dp),

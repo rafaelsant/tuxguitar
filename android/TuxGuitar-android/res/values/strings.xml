@@ -547,5 +547,7 @@
 	<string name="practice_start_here">Start at cursor</string>
 	<string name="practice_end_here">End at cursor</string>
 	<string name="practice_whole_song">Whole song</string>
+	<string name="practice_loop_set_one">Loop: measure %1$d</string>
+	<string name="practice_loop_set_range">Loop: measures %1$d–%2$d</string>
 
 </resources>
