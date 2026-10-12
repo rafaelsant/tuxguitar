@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.ComposeView;
 import app.tuxguitar.android.R;
 import app.tuxguitar.android.fragment.TGCachedFragment;
 import app.tuxguitar.android.menu.controller.impl.fragment.TGMainMenu;
+import app.tuxguitar.android.view.main.TGMainTopBar;
 import app.tuxguitar.android.view.practice.TGBottomBars;
 
 public class TGMainFragment extends TGCachedFragment {
@@ -26,7 +27,19 @@ public class TGMainFragment extends TGCachedFragment {
 
 	@Override
 	public void onPostInflateView() {
+		TGMainTopBar.bind((ComposeView) this.getView().findViewById(R.id.main_top_bar), this.findContext());
 		TGBottomBars.bind((ComposeView) this.getView().findViewById(R.id.main_bottom_bars), this.findContext());
+	}
+
+	// this screen draws its own top bar (TGMainTopBar); the other screens still use the action bar
+	@Override
+	public void onShowView() {
+		this.findActivity().getSupportActionBar().hide();
+	}
+
+	@Override
+	public void onHideView() {
+		this.findActivity().getSupportActionBar().show();
 	}
 
 	@Override

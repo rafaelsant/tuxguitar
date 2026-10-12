@@ -508,6 +508,9 @@
 	<string name="action_mode_play">Play</string>
 	<string name="action_mode_practice">Practice</string>
 	<string name="action_mode_edit">Edit</string>
+	<string name="main_open_side_menu">Open side menu</string>
+	<string name="main_more_options">More options</string>
+	<string name="main_menu_back">Back</string>
 	<string name="practice_play">Play</string>
 	<string name="practice_pause">Pause</string>
 	<string name="practice_stop">Stop</string>

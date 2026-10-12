@@ -60,6 +60,10 @@ public class TGDrawerManager {
 		this.drawerToggle.syncState();
 	}
 
+	public void openDrawer() {
+		this.drawerLayout.openDrawer(this.drawerView);
+	}
+
 	public void closeDrawer() {
 		this.drawerLayout.closeDrawer(this.drawerView);
 	}

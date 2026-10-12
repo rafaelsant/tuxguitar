@@ -5,9 +5,15 @@
 
     <FrameLayout
         android:id="@+id/main_top"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true">
+
+        <!-- Top bar drawn with Compose (TGMainTopBar.kt); replaces the action bar on this screen -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/main_top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </FrameLayout>
 
     <FrameLayout
