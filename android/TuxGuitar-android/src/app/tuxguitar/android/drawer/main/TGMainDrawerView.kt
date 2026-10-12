@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.tuxguitar.android.R
 import app.tuxguitar.android.action.impl.gui.TGOpenDialogAction
 import app.tuxguitar.android.action.impl.gui.TGOpenFragmentAction
@@ -49,6 +50,8 @@ import app.tuxguitar.android.application.TGApplicationUtil
 import app.tuxguitar.android.fragment.impl.TGChannelListFragmentController
 import app.tuxguitar.android.view.compose.TGComposeTheme
 import app.tuxguitar.android.view.dialog.info.TGSongInfoDialogController
+import app.tuxguitar.android.view.practice.TGAppMode
+import app.tuxguitar.android.view.practice.TGAppModeController
 import app.tuxguitar.android.view.tablature.TGSongViewController
 import app.tuxguitar.android.view.tablature.TGSongViewSmartMenu
 import app.tuxguitar.document.TGDocumentContextAttributes
@@ -75,7 +78,7 @@ class TGMainDrawerView @JvmOverloads constructor(context: Context, attrs: Attrib
 	}
 }
 
-private class TrackItem(val track: TGTrack, val name: String, val selected: Boolean)
+private class TrackItem(val track: TGTrack, val name: String, val tuning: String, val selected: Boolean)
 
 @Composable
 private fun MainDrawer(context: TGContext, activity: TGActivity) {
@@ -91,7 +94,7 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 				songName = song?.name?.takeIf { it.isNotBlank() }
 				tracks = (0 until (song?.countTracks() ?: 0)).map { i ->
 					val track = song.getTrack(i)
-					TrackItem(track, track.name, track == selected)
+					TrackItem(track, track.name, tuningOf(track), track == selected)
 				}
 			}
 			delay(500)
@@ -113,12 +116,15 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 			}
 		}
 
-		// ---- file
+		// ---- file: saving only in edit mode, so practicing never overwrites a song by accident
+		val editing = TGAppModeController.getInstance(context).mode == TGAppMode.EDIT
 		SectionLabel(stringResource(R.string.main_drawer_file))
-		DrawerAction(stringResource(R.string.action_file_new)) { run(TGLoadTemplateAction.NAME) }
 		DrawerAction(stringResource(R.string.action_file_open)) { run(TGOpenDocumentAction.NAME) }
-		DrawerAction(stringResource(R.string.action_file_save)) { run(TGSaveDocumentAction.NAME) }
-		DrawerAction(stringResource(R.string.action_file_save_as)) { run(TGSaveDocumentAsAction.NAME) }
+		DrawerAction(stringResource(R.string.action_file_new)) { run(TGLoadTemplateAction.NAME) }
+		if (editing) {
+			DrawerAction(stringResource(R.string.action_file_save)) { run(TGSaveDocumentAction.NAME) }
+			DrawerAction(stringResource(R.string.action_file_save_as)) { run(TGSaveDocumentAsAction.NAME) }
+		}
 
 		HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -129,20 +135,25 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 				TrackRow(
 					item = item,
 					onClick = { run(TGGoToTrackAction.NAME, TGDocumentContextAttributes.ATTRIBUTE_TRACK to item.track) },
-					onLongClick = {
-						run(
-							TGGoToTrackAction.NAME,
-							TGDocumentContextAttributes.ATTRIBUTE_TRACK to item.track,
-							TGSongViewSmartMenu.REQUEST_SMART_MENU to true,
-							TGSongViewSmartMenu.TRACK_AREA_SELECTED to true,
-						)
+					// the long press menu edits the track, so only in edit mode
+					onLongClick = if (!editing) null else {
+						{
+							run(
+								TGGoToTrackAction.NAME,
+								TGDocumentContextAttributes.ATTRIBUTE_TRACK to item.track,
+								TGSongViewSmartMenu.REQUEST_SMART_MENU to true,
+								TGSongViewSmartMenu.TRACK_AREA_SELECTED to true,
+							)
+						}
 					},
 				)
 			}
 		}
-		TextButton(onClick = { run(TGAddNewTrackAction.NAME) }, modifier = Modifier.padding(horizontal = 12.dp)) {
-			Icon(painterResource(R.drawable.ic_bar_add_24dp), contentDescription = null)
-			Text(stringResource(R.string.action_track_add), modifier = Modifier.padding(start = 8.dp))
+		if (editing) {
+			TextButton(onClick = { run(TGAddNewTrackAction.NAME) }, modifier = Modifier.padding(horizontal = 12.dp)) {
+				Icon(painterResource(R.drawable.ic_bar_add_24dp), contentDescription = null)
+				Text(stringResource(R.string.action_track_add), modifier = Modifier.padding(start = 8.dp))
+			}
 		}
 
 		HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -173,6 +184,12 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 	}
 }
 
+private val NOTE_NAMES = arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+
+/** Tuning from the lowest string to the highest, e.g. "C G C F A D"; empty for percussion. */
+private fun tuningOf(track: TGTrack): String =
+	if (track.isPercussion) "" else track.strings.sortedByDescending { it.number }.joinToString(" ") { NOTE_NAMES[it.value % 12] }
+
 @Composable
 private fun SectionLabel(text: String) {
 	Text(
@@ -196,7 +213,7 @@ private fun DrawerAction(label: String, onClick: () -> Unit) {
 /** Track row: tap selects the track, long press also opens its smart menu. The selected track is highlighted. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TrackRow(item: TrackItem, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun TrackRow(item: TrackItem, onClick: () -> Unit, onLongClick: (() -> Unit)?) {
 	val colors = MaterialTheme.colorScheme
 	Row(
 		verticalAlignment = Alignment.CenterVertically,
@@ -209,12 +226,17 @@ private fun TrackRow(item: TrackItem, onClick: () -> Unit, onLongClick: () -> Un
 			.combinedClickable(onClick = onClick, onLongClick = onLongClick)
 			.padding(horizontal = 16.dp, vertical = 14.dp),
 	) {
-		Text(
-			item.name,
-			maxLines = 1,
-			overflow = TextOverflow.Ellipsis,
-			color = if (item.selected) colors.onSecondaryContainer else colors.onSurfaceVariant,
-			fontWeight = if (item.selected) FontWeight.Bold else FontWeight.Normal,
-		)
+		Column {
+			Text(
+				item.name,
+				maxLines = 1,
+				overflow = TextOverflow.Ellipsis,
+				color = if (item.selected) colors.onSecondaryContainer else colors.onSurface,
+				fontWeight = if (item.selected) FontWeight.Bold else FontWeight.Normal,
+			)
+			if (item.tuning.isNotEmpty()) {
+				Text(item.tuning, fontSize = 12.sp, color = if (item.selected) colors.onSecondaryContainer else colors.onSurfaceVariant)
+			}
+		}
 	}
 }

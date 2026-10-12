@@ -2,6 +2,17 @@ package app.tuxguitar.android.view.main
 
 import android.view.Menu
 import android.view.View
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.ui.unit.sp
 import androidx.appcompat.widget.PopupMenu
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -9,8 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,12 +85,12 @@ object TGMainTopBar {
 private fun MainTopBar(context: TGContext) {
 	val activity = TGActivityController.getInstance(context).activity
 	val defaultTitle = stringResource(R.string.app_name)
-	var title by remember { mutableStateOf(defaultTitle) }
+	var title by remember { mutableStateOf(SongTitle(defaultTitle, null)) }
 
 	// the song can change at any time (open, new, edit info); polling keeps this simple
 	LaunchedEffect(Unit) {
 		while (true) {
-			title = runCatching { songTitle(context) }.getOrNull() ?: defaultTitle
+			title = runCatching { songTitle(context) }.getOrNull() ?: SongTitle(defaultTitle, null)
 			delay(500)
 		}
 	}
@@ -94,24 +103,27 @@ private fun MainTopBar(context: TGContext) {
 			IconButton(onClick = { activity?.drawerManager?.openDrawer() }) {
 				Icon(painterResource(R.drawable.ic_bar_menu_24dp), stringResource(R.string.main_open_side_menu))
 			}
-			Text(
-				title,
-				style = MaterialTheme.typography.titleLarge,
-				maxLines = 1,
-				overflow = TextOverflow.Ellipsis,
-				modifier = Modifier.weight(1f).padding(start = 4.dp),
-			)
+			// at 360dp only ~110dp are left for the title: two small lines instead of one large
+			Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
+				Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+				title.artist?.let {
+					Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+				}
+			}
 			ModeSwitcher(TGAppModeController.getInstance(context))
 			if (activity != null) {
-				OverflowMenu(context, activity)
+				OverflowMenu(context, activity, TGAppModeController.getInstance(context).mode)
 			}
 		}
 	}
 }
 
-private fun songTitle(context: TGContext): String? {
+private data class SongTitle(val name: String, val artist: String?)
+
+private fun songTitle(context: TGContext): SongTitle? {
 	val song = TGDocumentManager.getInstance(context).song ?: return null
-	return song.name?.takeIf { it.isNotBlank() }
+	val name = song.name?.takeIf { it.isNotBlank() } ?: return null
+	return SongTitle(name, song.artist?.takeIf { it.isNotBlank() })
 }
 
 /** The three modes in a pill; the selected one is filled with the accent container color. */
@@ -142,111 +154,137 @@ private fun ModeButton(modeController: TGAppModeController, mode: TGAppMode, ico
 
 // ---------------------------------------------------------------- overflow menu
 
-/** A menu level: the root list, or a menu filled by one of the app's menu controllers. */
-private class MenuLevel(val title: String, val menu: Menu)
+/** A menu level: a list of entries of ours, or a menu filled by one of the app's menu controllers. */
+private class MenuLevel(val title: String, val entries: List<RootEntry>? = null, val menu: Menu? = null)
 
-/** Root entries: open a submenu (controller), or run something directly. */
-private class RootEntry(val label: Int, val controller: ((TGActivity) -> TGMenuController)? = null, val run: (() -> Unit)? = null)
+/** Entry of our own levels: opens a controller menu, opens a group of entries, or runs something directly. */
+private class RootEntry(
+	val label: Int,
+	val controller: ((TGActivity) -> TGMenuController)? = null,
+	val group: List<RootEntry>? = null,
+	val run: (() -> Unit)? = null,
+)
 
-@Composable
-private fun OverflowMenu(context: TGContext, activity: TGActivity) {
-	var expanded by remember { mutableStateOf(false) }
-	var levels by remember { mutableStateOf(listOf<MenuLevel>()) }
-
-	val entries = remember {
-		listOf(
-			RootEntry(R.string.action_change_tempo, run = { openTempoDialog(context, activity) }),
-			RootEntry(R.string.action_menu_edit, { TGEditMenu(it) }),
-			RootEntry(R.string.action_menu_view, { TGViewMenu(it) }),
-			RootEntry(R.string.action_menu_composition, { TGCompositionMenu(it) }),
-			RootEntry(R.string.action_menu_track, { TGTrackMenu(it) }),
-			RootEntry(R.string.action_menu_measure, { TGMeasureMenu(it) }),
+/**
+ * Entries for the current mode: Play and Practice only need the view options and settings (the bottom bars
+ * handle playback); Edit has every menu, with the note level ones grouped.
+ */
+private fun rootEntries(mode: TGAppMode, context: TGContext, activity: TGActivity): List<RootEntry> {
+	val view = RootEntry(R.string.action_menu_view, { TGViewMenu(it) })
+	val settings = RootEntry(R.string.action_menu_settings, run = { openSettings(context, activity) })
+	if (mode != TGAppMode.EDIT) {
+		return listOf(view, settings)
+	}
+	return listOf(
+		RootEntry(R.string.action_menu_edit, { TGEditMenu(it) }),
+		view,
+		RootEntry(R.string.action_menu_composition, { TGCompositionMenu(it) }),
+		RootEntry(R.string.action_menu_track, { TGTrackMenu(it) }),
+		RootEntry(R.string.action_menu_measure, { TGMeasureMenu(it) }),
+		RootEntry(R.string.main_menu_note, group = listOf(
 			RootEntry(R.string.action_menu_beat, { TGBeatMenu(it) }),
 			RootEntry(R.string.action_menu_duration, { TGDurationMenu(it) }),
 			RootEntry(R.string.action_menu_dynamic, { TGVelocityMenu(it) }),
 			RootEntry(R.string.action_menu_effects, { TGEffectMenu(it) }),
-			RootEntry(R.string.action_menu_transport, { TGTransportMenu(it) }),
-			RootEntry(R.string.action_menu_settings, run = { openSettings(context, activity) }),
-		)
-	}
+		)),
+		RootEntry(R.string.action_menu_transport, { TGTransportMenu(it) }),
+		RootEntry(R.string.main_edit_song_tempo, run = { openTempoDialog(context, activity) }),
+		settings,
+	)
+}
+
+/** The ⋮ button opens a bottom sheet (reachable with the thumb) that drills into the menus level by level. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OverflowMenu(context: TGContext, activity: TGActivity, mode: TGAppMode) {
+	var open by remember { mutableStateOf(false) }
+	var levels by remember { mutableStateOf(listOf<MenuLevel>()) }
+	val rootTitle = stringResource(R.string.main_more_options)
 
 	fun close() {
-		expanded = false
+		open = false
 		levels = listOf()
 	}
 
-	Box {
-		IconButton(onClick = { levels = listOf(); expanded = true }) {
-			Icon(painterResource(R.drawable.ic_bar_more_24dp), stringResource(R.string.main_more_options))
+	IconButton(onClick = { levels = listOf(MenuLevel(rootTitle, entries = rootEntries(mode, context, activity))); open = true }) {
+		Icon(painterResource(R.drawable.ic_bar_more_24dp), rootTitle)
+	}
+	if (!open) return
+
+	ModalBottomSheet(onDismissRequest = { close() }) {
+		val level = levels.last()
+		// header stays in place while the items scroll
+		Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+			if (levels.size > 1) {
+				IconButton(onClick = { levels = levels.dropLast(1) }) {
+					Icon(painterResource(R.drawable.ic_bar_back_24dp), stringResource(R.string.main_menu_back))
+				}
+			}
+			Text(
+				level.title,
+				style = MaterialTheme.typography.titleMedium,
+				fontWeight = FontWeight.Bold,
+				modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+			)
 		}
-		DropdownMenu(expanded = expanded, onDismissRequest = { close() }) {
-			val level = levels.lastOrNull()
-			if (level == null) {
-				entries.forEach { entry ->
+		HorizontalDivider()
+		LazyColumn(modifier = Modifier.padding(bottom = 16.dp)) {
+			val entries = level.entries
+			val menu = level.menu
+			if (entries != null) {
+				items(entries) { entry ->
 					val label = stringResource(entry.label)
-					DropdownMenuItem(
-						text = { Text(label) },
-						trailingIcon = if (entry.controller != null) {
-							{ Icon(painterResource(R.drawable.ic_bar_chevron_right_24dp), null) }
-						} else null,
-						onClick = {
-							val controller = entry.controller
-							if (controller != null) {
-								levels = levels + MenuLevel(label, buildMenu(activity, controller(activity)))
-							} else {
+					SheetRow(label, enabled = true, hasSubmenu = entry.controller != null || entry.group != null, checked = false) {
+						val controller = entry.controller
+						val group = entry.group
+						when {
+							controller != null -> levels = levels + MenuLevel(label, menu = buildMenu(activity, controller(activity)))
+							group != null -> levels = levels + MenuLevel(label, entries = group)
+							else -> {
 								close()
 								entry.run?.invoke()
 							}
-						},
-					)
+						}
+					}
 				}
-			} else {
-				DropdownMenuItem(
-					text = { Text(level.title, fontWeight = FontWeight.Bold) },
-					leadingIcon = { Icon(painterResource(R.drawable.ic_bar_back_24dp), stringResource(R.string.main_menu_back)) },
-					onClick = { levels = levels.dropLast(1) },
-				)
-				HorizontalDivider()
-				MenuItems(level.menu,
-					onOpenSubmenu = { title, menu -> levels = levels + MenuLevel(title, menu) },
-					onItemDone = { close() },
-				)
+			} else if (menu != null) {
+				val visibleItems = (0 until menu.size()).map { menu.getItem(it) }.filter { it.isVisible }
+				items(visibleItems) { item ->
+					val title = item.title?.toString() ?: ""
+					SheetRow(title, enabled = item.isEnabled, hasSubmenu = item.hasSubMenu(), checked = item.isCheckable && item.isChecked) {
+						val subMenu = item.subMenu
+						if (item.hasSubMenu() && subMenu != null) {
+							levels = levels + MenuLevel(title, menu = subMenu)
+						} else {
+							close()
+							// runs the click listener the menu controller set on the item
+							menu.performIdentifierAction(item.itemId, 0)
+						}
+					}
+				}
 			}
 		}
 	}
 }
 
-/** Items of an Android menu filled by a menu controller, with their enabled / checked state. */
 @Composable
-private fun MenuItems(menu: Menu, onOpenSubmenu: (String, Menu) -> Unit, onItemDone: () -> Unit) {
-	for (i in 0 until menu.size()) {
-		val item = menu.getItem(i)
-		if (!item.isVisible) continue
-		val title = item.title?.toString() ?: ""
-		DropdownMenuItem(
-			text = { Text(title) },
-			enabled = item.isEnabled,
-			trailingIcon = when {
-				item.hasSubMenu() -> {
-					{ Icon(painterResource(R.drawable.ic_bar_chevron_right_24dp), null) }
-				}
-				item.isCheckable && item.isChecked -> {
-					{ Icon(painterResource(R.drawable.ic_bar_check_24dp), null, tint = MaterialTheme.colorScheme.primary) }
-				}
-				else -> null
-			},
-			onClick = {
-				val subMenu = item.subMenu
-				if (item.hasSubMenu() && subMenu != null) {
-					onOpenSubmenu(title, subMenu)
-				} else {
-					onItemDone()
-					// runs the click listener the menu controller set on the item
-					menu.performIdentifierAction(item.itemId, 0)
-				}
-			},
-		)
-	}
+private fun SheetRow(label: String, enabled: Boolean, hasSubmenu: Boolean, checked: Boolean, onClick: () -> Unit) {
+	ListItem(
+		headlineContent = { Text(label) },
+		trailingContent = when {
+			hasSubmenu -> {
+				{ Icon(painterResource(R.drawable.ic_bar_chevron_right_24dp), null) }
+			}
+			checked -> {
+				{ Icon(painterResource(R.drawable.ic_bar_check_24dp), null, tint = MaterialTheme.colorScheme.primary) }
+			}
+			else -> null
+		},
+		colors = if (enabled) ListItemDefaults.colors() else ListItemDefaults.colors(
+			headlineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+		),
+		modifier = Modifier.heightIn(min = 56.dp).clickable(enabled = enabled, onClick = onClick),
+	)
 }
 
 /** Lets a menu controller fill a plain Android menu, without showing it. */
@@ -257,7 +295,10 @@ private fun buildMenu(activity: TGActivity, controller: TGMenuController): Menu 
 }
 
 private fun openTempoDialog(context: TGContext, activity: TGActivity) {
-	if (MidiPlayer.getInstance(context).isRunning) return
+	if (MidiPlayer.getInstance(context).isRunning) {
+		Toast.makeText(activity, R.string.main_stop_playback_first, Toast.LENGTH_SHORT).show()
+		return
+	}
 	val processor = TGActionProcessor(context, TGOpenDialogAction.NAME)
 	processor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_ACTIVITY, activity)
 	processor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_CONTROLLER, TGTempoDialogController())

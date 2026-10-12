@@ -511,6 +511,9 @@
 	<string name="main_open_side_menu">Open side menu</string>
 	<string name="main_more_options">More options</string>
 	<string name="main_menu_back">Back</string>
+	<string name="main_menu_note">Note</string>
+	<string name="main_edit_song_tempo">Edit song tempo…</string>
+	<string name="main_stop_playback_first">Stop playback first</string>
 	<string name="practice_play">Play</string>
 	<string name="practice_pause">Pause</string>
 	<string name="practice_stop">Stop</string>
