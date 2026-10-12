@@ -131,6 +131,7 @@ object TGDiagnostics {
 			text.append("  window focus=").append(activity.hasWindowFocus())
 				.append(" lifecycle=").append(activity.lifecycle.currentState)
 				.append(" actionBar showing=").append(activity.supportActionBar?.isShowing).append('\n')
+			(activity as? app.tuxguitar.android.activity.TGActivity)?.findContext()?.let { text.append("  ").append(lockInfo(it)).append('\n') }
 			val root = activity.findViewById<android.view.View>(app.tuxguitar.android.R.id.root_layout)
 			(root as? androidx.drawerlayout.widget.DrawerLayout)?.let {
 				text.append("  drawer open=").append(it.isDrawerOpen(androidx.core.view.GravityCompat.START))
@@ -149,6 +150,28 @@ object TGDiagnostics {
 			lines.take(DUMP_MAX_LINES).forEach { text.append(it).append('\n') }
 			log(text.toString())
 		}.onFailure { log("dump failed", it) }
+	}
+
+	/**
+	 * Who holds the editor lock (the actions that change the song or the screens take it) and what that thread is
+	 * doing: an action on the main thread waits for it, retrying, without blocking the thread.
+	 */
+	@JvmStatic
+	fun lockInfo(context: app.tuxguitar.util.TGContext): String {
+		return runCatching { describeLock(context) }.getOrElse { "editor lock: unknown (" + it + ")" }
+	}
+
+	private fun describeLock(context: app.tuxguitar.util.TGContext): String {
+		val lock = app.tuxguitar.editor.TGEditorManager.getInstance(context).lockControl ?: return "editor lock: none"
+		val ownerField = lock.javaClass.getDeclaredField("lockThread").apply { isAccessible = true }
+		val countField = lock.javaClass.getDeclaredField("lockCount").apply { isAccessible = true }
+		val owner = ownerField.get(lock) ?: return "editor lock: free"
+		val text = StringBuilder("editor lock: held ").append(countField.get(lock)).append("x by thread id ").append(owner)
+		Thread.getAllStackTraces().entries.firstOrNull { it.key.id == owner }?.let { (thread, frames) ->
+			text.append(" \"").append(thread.name).append("\" ").append(thread.state).append('\n')
+			frames.take(25).forEach { text.append("      at ").append(it).append('\n') }
+		} ?: text.append(" (thread not alive)")
+		return text.toString()
 	}
 
 	private fun dumpView(view: android.view.View, depth: Int, lines: MutableList<String>) {

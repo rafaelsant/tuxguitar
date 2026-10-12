@@ -11,12 +11,15 @@ import app.tuxguitar.action.TGActionInterceptor;
 import app.tuxguitar.action.TGActionPostExecutionEvent;
 import app.tuxguitar.action.TGActionPreExecutionEvent;
 import app.tuxguitar.android.action.listener.thread.TGSyncThreadAction;
+import app.tuxguitar.android.application.TGDiagnostics;
 import app.tuxguitar.editor.TGEditorManager;
 import app.tuxguitar.event.TGEvent;
 import app.tuxguitar.event.TGEventListener;
 import app.tuxguitar.util.TGContext;
 
 public class TGLockableActionListener extends TGSyncThreadAction implements TGActionInterceptor, TGEventListener {
+
+	private static final String LOCK_ATTEMPTS = TGLockableActionListener.class.getSimpleName() + "-lock-attempts";
 
 	private static final String INTERCEPTOR_BY_PASS = TGLockableActionListener.class.getSimpleName() + "-interceptor-by-pass";
 
@@ -95,6 +98,12 @@ public class TGLockableActionListener extends TGSyncThreadAction implements TGAc
 			}
 		} else {
 			// try later
+			Integer attempts = context.getAttribute(LOCK_ATTEMPTS);
+			attempts = (attempts != null ? attempts + 1 : 1);
+			context.setAttribute(LOCK_ATTEMPTS, attempts);
+			if( attempts == 1 || attempts == 100 || attempts % 1000 == 0 ) {
+				TGDiagnostics.log("action " + actionId + " waits for the editor lock (attempt " + attempts + "): " + TGDiagnostics.lockInfo(this.getContext()));
+			}
 			this.runInUiThread(actionId, context);
 		}
 	}
