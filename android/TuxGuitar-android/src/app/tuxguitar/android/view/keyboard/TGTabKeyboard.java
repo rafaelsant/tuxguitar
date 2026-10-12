@@ -7,6 +7,7 @@ import android.util.AttributeSet;
 import android.widget.FrameLayout;
 
 import app.tuxguitar.android.R;
+import app.tuxguitar.android.action.impl.transport.TGTransportPlayAction;
 import app.tuxguitar.android.action.TGActionProcessorListener;
 import app.tuxguitar.android.action.impl.caret.TGGoDownAction;
 import app.tuxguitar.android.action.impl.caret.TGGoLeftAction;
@@ -68,6 +69,7 @@ public class TGTabKeyboard extends FrameLayout {
 		findViewById(R.id.tab_kb_button_set_duration).setOnClickListener(createContextMenuActionListener(new TGDurationMenu(this.findActivity())));
 
 		findViewById(R.id.tab_kb_button_select).setOnClickListener(new TGActionProcessorListener(context, TGShowSmartMenuAction.NAME));
+		findViewById(R.id.tab_kb_button_play).setOnClickListener(new TGActionProcessorListener(context, TGTransportPlayAction.NAME));
 	}
 
 	public TGActionProcessorListener createContextMenuActionListener(TGMenuController controller) {
@@ -95,6 +97,19 @@ public class TGTabKeyboard extends FrameLayout {
 					TGTabKeyboard.this.clearAnimation();
 				}
 			});
+		}
+	}
+
+	/** Shows or hides the keyboard, animated, only if it is not already in that state. */
+	public void setVisible(boolean visible) {
+		boolean shown = (this.getVisibility() == VISIBLE && this.getTranslationY() == 0f);
+		if( visible != shown ) {
+			if( visible ) {
+				// start below the screen, so that toggleVisibility() slides it up
+				this.setVisibility(GONE);
+				this.setTranslationY(this.getHeight());
+			}
+			this.toggleVisibility();
 		}
 	}
 

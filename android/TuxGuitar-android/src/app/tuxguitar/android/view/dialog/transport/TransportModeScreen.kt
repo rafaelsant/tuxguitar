@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.tuxguitar.android.R
 import app.tuxguitar.android.view.compose.TGComposeTheme
+import app.tuxguitar.android.view.compose.TGNumberField
 import kotlinx.coroutines.delay
 
 object TransportModeCompose {
@@ -104,7 +105,7 @@ fun TransportModeScreen(state: TransportModeState) {
 @Composable
 private fun SimpleSection(state: TransportModeState) {
 	Section(title = stringResource(R.string.transport_mode_dlg_simple)) {
-		NumberField(
+		TGNumberField(
 			label = stringResource(R.string.transport_mode_dlg_simple_tempo_percent_label),
 			value = state.simplePercent,
 			range = TransportModeState.MIN_PERCENT..TransportModeState.MAX_PERCENT,
@@ -126,7 +127,7 @@ private fun SimpleSection(state: TransportModeState) {
 private fun TrainerSection(state: TransportModeState) {
 	val range = TransportModeState.MIN_PERCENT..TransportModeState.MAX_PERCENT
 	Section(title = stringResource(R.string.transport_mode_dlg_trainer)) {
-		NumberField(
+		TGNumberField(
 			label = stringResource(R.string.transport_mode_dlg_trainer_tempo_percent_from_label),
 			value = state.trainerFrom,
 			range = range,
@@ -134,7 +135,7 @@ private fun TrainerSection(state: TransportModeState) {
 			onValidityChange = { state.setFieldValid("trainerFrom", it) },
 			hint = stringResource(R.string.transport_mode_dlg_tempo_bpm_hint, state.trainerFrom, state.percentToBpm(state.trainerFrom)),
 		)
-		NumberField(
+		TGNumberField(
 			label = stringResource(R.string.transport_mode_dlg_trainer_tempo_percent_to_label),
 			value = state.trainerTo,
 			range = range,
@@ -142,7 +143,7 @@ private fun TrainerSection(state: TransportModeState) {
 			onValidityChange = { state.setFieldValid("trainerTo", it) },
 			hint = stringResource(R.string.transport_mode_dlg_tempo_bpm_hint, state.trainerTo, state.percentToBpm(state.trainerTo)),
 		)
-		NumberField(
+		TGNumberField(
 			label = stringResource(R.string.transport_mode_dlg_trainer_tempo_increment_label),
 			value = state.trainerIncrement,
 			range = range,
@@ -167,7 +168,7 @@ private fun TrainerSection(state: TransportModeState) {
 private fun LoopSection(state: TransportModeState) {
 	val range = 1..state.measureCount
 	Section(title = stringResource(R.string.transport_mode_dlg_loop_range_label)) {
-		NumberField(
+		TGNumberField(
 			label = stringResource(R.string.transport_mode_dlg_loop_range_from_label),
 			value = state.loopFrom,
 			range = range,
@@ -181,7 +182,7 @@ private fun LoopSection(state: TransportModeState) {
 			},
 		)
 		val endHint = stringResource(R.string.transport_mode_dlg_loop_range_end_hint)
-		NumberField(
+		TGNumberField(
 			label = stringResource(R.string.transport_mode_dlg_loop_range_to_label),
 			value = state.loopTo,
 			range = range,
@@ -218,136 +219,5 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 private fun ErrorText(error: Int?) {
 	if (error != null) {
 		Text(stringResource(error), color = MaterialTheme.colorScheme.error)
-	}
-}
-
-/**
- * A number with large "-" and "+" buttons; holding a button repeats the step.
- * The text can also be typed: out of range text is reported through [onValueChange] only once it is valid.
- */
-@Composable
-private fun NumberField(
-	label: String,
-	value: Int,
-	range: IntRange,
-	onValueChange: (Int) -> Unit,
-	onValidityChange: (Boolean) -> Unit,
-	hint: String?,
-	trailing: (@Composable () -> Unit)? = null,
-) {
-	var text by remember { mutableStateOf(value.toString()) }
-	var valid by remember { mutableStateOf(true) }
-	val focusManager = LocalFocusManager.current
-
-	// follow changes made by the buttons or other fields
-	LaunchedEffect(value) {
-		if (text.toIntOrNull() != value) {
-			text = value.toString()
-			if (!valid) {
-				valid = true
-				onValidityChange(true)
-			}
-		}
-	}
-
-	fun step(delta: Int): Boolean {
-		val next = (value + delta).coerceIn(range)
-		if (next == value) return false
-		onValueChange(next)
-		return true
-	}
-
-	Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-		Text(label, style = MaterialTheme.typography.bodyMedium)
-		Row(verticalAlignment = Alignment.CenterVertically) {
-			RepeatingButton(
-				text = "−",
-				description = stringResource(R.string.number_stepper_decrease_description),
-				enabled = value > range.first,
-				onStep = { step(-1) },
-			)
-			OutlinedTextField(
-				value = text,
-				onValueChange = { newText ->
-					val digits = newText.filter { it.isDigit() }.take(4)
-					text = digits
-					val parsed = digits.toIntOrNull()
-					val nowValid = parsed != null && parsed in range
-					if (nowValid) onValueChange(parsed!!)
-					if (nowValid != valid) {
-						valid = nowValid
-						onValidityChange(nowValid)
-					}
-				},
-				isError = !valid,
-				singleLine = true,
-				textStyle = MaterialTheme.typography.titleLarge.copy(textAlign = TextAlign.Center),
-				keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-				keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-				modifier = Modifier
-					.width(96.dp)
-					.padding(horizontal = 8.dp)
-					.onFocusChanged { focus ->
-						// leaving the field restores the last valid value
-						if (!focus.isFocused && !valid) {
-							text = value.toString()
-							valid = true
-							onValidityChange(true)
-						}
-					},
-			)
-			RepeatingButton(
-				text = "+",
-				description = stringResource(R.string.number_stepper_increase_description),
-				enabled = value < range.last,
-				onStep = { step(1) },
-			)
-		}
-		val message = if (valid) hint else stringResource(R.string.number_stepper_error_range, range.first, range.last)
-		if (message != null) {
-			Text(
-				message,
-				style = MaterialTheme.typography.bodySmall,
-				color = if (valid) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-			)
-		}
-		if (trailing != null) {
-			trailing()
-		}
-	}
-}
-
-/** Steps once on tap, and keeps stepping while held. [onStep] returns false when the limit is reached. */
-@Composable
-private fun RepeatingButton(text: String, description: String, enabled: Boolean, onStep: () -> Boolean) {
-	val interactionSource = remember { MutableInteractionSource() }
-	val pressed by interactionSource.collectIsPressedAsState()
-	val currentOnStep by rememberUpdatedState(onStep)
-	var steppedByPress by remember { mutableStateOf(false) }
-
-	LaunchedEffect(pressed) {
-		if (pressed) {
-			steppedByPress = true
-			if (!currentOnStep()) return@LaunchedEffect
-			delay(400)
-			while (currentOnStep()) {
-				delay(60)
-			}
-		}
-	}
-
-	FilledTonalIconButton(
-		onClick = {
-			// accessibility services click without pressing
-			if (!steppedByPress) currentOnStep()
-			steppedByPress = false
-		},
-		enabled = enabled,
-		interactionSource = interactionSource,
-		modifier = Modifier
-			.size(56.dp)
-			.semantics { contentDescription = description },
-	) {
-		Text(text, fontSize = 26.sp)
 	}
 }

@@ -3,21 +3,25 @@
       xmlns:tools="http://schemas.android.com/tools"
       tools:context="app.tuxguitar.android.TGActivity" >
 
+    <!-- Main screen modes: the selected one is highlighted (see TGMainMenu) -->
     <item
-        android:id="@+id/action_tab_keyboard_toggle"
+        android:id="@+id/action_mode_play"
+        android:icon="@drawable/ic_mode_play_white_24dp"
+        android:title="@string/action_mode_play"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/action_mode_practice"
+        android:icon="@drawable/ic_mode_practice_white_24dp"
+        android:title="@string/action_mode_practice"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/action_mode_edit"
         android:icon="@drawable/ic_edit_white_24dp"
-        android:title="@string/action_tab_keyboard_toggle"
+        android:title="@string/action_mode_edit"
         app:showAsAction="always"/>
     <item
-        android:id="@+id/action_transport_play"
-        android:icon="@drawable/ic_play_circle_outline_white_24dp"
-        android:title="@string/action_transport_play"
-        app:showAsAction="always"/>
-    <item
-        android:id="@+id/action_tempo_display"
-        android:title="@string/action_change_tempo"
-        app:actionLayout="@layout/view_tempo_menu_item"
-        app:showAsAction="always"/>
+        android:id="@+id/action_change_tempo"
+        android:title="@string/action_change_tempo"/>
     <item
         android:id="@+id/action_menu_edit"
         android:title="@string/action_menu_edit"/>

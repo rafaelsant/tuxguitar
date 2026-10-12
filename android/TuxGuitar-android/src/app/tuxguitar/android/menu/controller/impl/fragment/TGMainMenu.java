@@ -2,6 +2,7 @@ package app.tuxguitar.android.menu.controller.impl.fragment;
 
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
@@ -10,8 +11,6 @@ import app.tuxguitar.android.action.TGActionProcessorListener;
 import app.tuxguitar.android.action.impl.gui.TGOpenDialogAction;
 import app.tuxguitar.android.action.impl.gui.TGOpenFragmentAction;
 import app.tuxguitar.android.action.impl.gui.TGOpenMenuAction;
-import app.tuxguitar.android.action.impl.transport.TGTransportPlayAction;
-import app.tuxguitar.android.action.impl.view.TGToggleTabKeyboardAction;
 import app.tuxguitar.android.activity.TGActivity;
 import app.tuxguitar.android.activity.TGActivityController;
 import app.tuxguitar.android.fragment.TGFragmentController;
@@ -30,6 +29,8 @@ import app.tuxguitar.android.menu.controller.impl.contextual.TGViewMenu;
 import app.tuxguitar.android.menu.util.TGToggleStyledIconHandler;
 import app.tuxguitar.android.menu.util.TGToggleStyledIconHelper;
 import app.tuxguitar.android.view.dialog.tempo.TGTempoDialogController;
+import app.tuxguitar.android.view.practice.TGAppMode;
+import app.tuxguitar.android.view.practice.TGAppModeController;
 import app.tuxguitar.android.view.tablature.TGSongViewController;
 import app.tuxguitar.player.base.MidiPlayer;
 import app.tuxguitar.song.models.TGTempo;
@@ -41,6 +42,7 @@ public class TGMainMenu implements TGMenuController {
 
 	private TGContext context;
 	private TGToggleStyledIconHelper styledIconHelper;
+	// the tempo used to be shown in the top bar; the play and practice bars show it now
 	private TextView tempoDisplayItem;
 
 	private TGMainMenu(TGContext context) {
@@ -56,8 +58,20 @@ public class TGMainMenu implements TGMenuController {
 	}
 
 	public void initializeItems(Menu menu) {
-		menu.findItem(R.id.action_tab_keyboard_toggle).setOnMenuItemClickListener(createActionProcessor(TGToggleTabKeyboardAction.NAME));
-		menu.findItem(R.id.action_transport_play).setOnMenuItemClickListener(createActionProcessor(TGTransportPlayAction.NAME));
+		this.initializeModeItem(menu, R.id.action_mode_play, TGAppMode.PLAY);
+		this.initializeModeItem(menu, R.id.action_mode_practice, TGAppMode.PRACTICE);
+		this.initializeModeItem(menu, R.id.action_mode_edit, TGAppMode.EDIT);
+		menu.findItem(R.id.action_change_tempo).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+			public boolean onMenuItemClick(MenuItem item) {
+				if (!MidiPlayer.getInstance(getContext()).isRunning()) {
+					TGActionProcessorListener tgActionProcessor = new TGActionProcessorListener(getContext(), TGOpenDialogAction.NAME);
+					tgActionProcessor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_ACTIVITY, getActivity());
+					tgActionProcessor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_CONTROLLER, new TGTempoDialogController());
+					tgActionProcessor.process();
+				}
+				return true;
+			}
+		});
 		menu.findItem(R.id.action_menu_edit).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGEditMenu(getActivity())));
 		menu.findItem(R.id.action_menu_view).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGViewMenu(getActivity())));
 		menu.findItem(R.id.action_menu_composition).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGCompositionMenu(getActivity())));
@@ -69,19 +83,19 @@ public class TGMainMenu implements TGMenuController {
 		menu.findItem(R.id.action_menu_effects).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGEffectMenu(getActivity())));
 		menu.findItem(R.id.action_menu_transport).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGTransportMenu(getActivity())));
 		menu.findItem(R.id.action_menu_settings).setOnMenuItemClickListener(createFragmentActionProcessor(new TGPreferencesFragmentController()));
+	}
 
-		this.tempoDisplayItem =  (TextView) menu.findItem(R.id.action_tempo_display).getActionView().findViewById(R.id.tempo_display_item);
-		this.tempoDisplayItem.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (MidiPlayer.getInstance(getContext()).isRunning()) return;
-				TGActionProcessorListener tgActionProcessor = new TGActionProcessorListener(getContext(), TGOpenDialogAction.NAME);
-				tgActionProcessor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_ACTIVITY, getActivity());
-				tgActionProcessor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_CONTROLLER, new TGTempoDialogController());
-				tgActionProcessor.process();
+	/** Mode icon in the top bar: selects the mode on tap; the current mode is shown fully opaque. */
+	private void initializeModeItem(Menu menu, int id, final TGAppMode mode) {
+		final TGAppModeController modeController = TGAppModeController.getInstance(getContext());
+		MenuItem item = menu.findItem(id);
+		item.getIcon().mutate().setAlpha(modeController.getMode() == mode ? 255 : 110);
+		item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+			public boolean onMenuItemClick(MenuItem item) {
+				modeController.setMode(mode);
+				return true;
 			}
 		});
-		this.updateTempoDisplay();
 	}
 
 	public void updateTempoDisplay() {

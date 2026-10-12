@@ -266,6 +266,10 @@
 		<item name="android:src">@drawable/ic_keyboard_arrow_left_gray_24dp</item>
 	</style>
 
+	<style name="TGKeyBoardButton.Play" >
+		<item name="android:src">@drawable/ic_play_gray_24dp</item>
+	</style>
+
 	<style name="TGKeyBoardButton.Up" >
 		<item name="android:src">@drawable/ic_keyboard_arrow_up_gray_24dp</item>
 	</style>

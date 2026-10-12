@@ -26,6 +26,12 @@ public class TGTabKeyboardController {
 		}
 	}
 
+	public void setVisible(boolean visible) {
+		if( this.getView() != null ) {
+			this.getView().setVisible(visible);
+		}
+	}
+
 	public static TGTabKeyboardController getInstance(TGContext context) {
 		return TGSingletonUtil.getInstance(context, TGTabKeyboardController.class.getName(), new TGSingletonFactory<TGTabKeyboardController>() {
 			public TGTabKeyboardController createInstance(TGContext context) {

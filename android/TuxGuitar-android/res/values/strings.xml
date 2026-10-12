@@ -503,4 +503,34 @@
 	<string name="number_stepper_increase_description">Increase</string>
 	<string name="number_stepper_error_range">Enter a value from %1$d to %2$d</string>
 
+
+	<!-- Main screen modes and bottom bars -->
+	<string name="action_mode_play">Play</string>
+	<string name="action_mode_practice">Practice</string>
+	<string name="action_mode_edit">Edit</string>
+	<string name="practice_play">Play</string>
+	<string name="practice_pause">Pause</string>
+	<string name="practice_stop">Stop</string>
+	<string name="practice_loop">Loop</string>
+	<string name="practice_metronome">Metronome</string>
+	<string name="practice_count_in">Count-in</string>
+	<string name="practice_expand">More options</string>
+	<string name="practice_collapse">Fewer options</string>
+	<string name="practice_bpm">%1$d BPM</string>
+	<string name="practice_bpm_label">Speed (BPM)</string>
+	<string name="practice_fixed_summary">%1$d%% of the original speed</string>
+	<string name="practice_training_progress">%1$d → %2$d BPM · loop %3$d of %4$d</string>
+	<string name="practice_speed">Speed</string>
+	<string name="practice_fixed">Fixed</string>
+	<string name="practice_training">Training</string>
+	<string name="practice_from">Start at (BPM)</string>
+	<string name="practice_to">Finish at (BPM)</string>
+	<string name="practice_increment">Increase per loop (BPM)</string>
+	<string name="practice_section">Section</string>
+	<string name="practice_start">First measure</string>
+	<string name="practice_end">Last measure</string>
+	<string name="practice_start_here">Start at cursor</string>
+	<string name="practice_end_here">End at cursor</string>
+	<string name="practice_whole_song">Whole song</string>
+
 </resources>

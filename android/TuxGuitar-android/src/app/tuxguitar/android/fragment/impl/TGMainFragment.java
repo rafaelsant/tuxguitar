@@ -5,9 +5,12 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 
+import androidx.compose.ui.platform.ComposeView;
+
 import app.tuxguitar.android.R;
 import app.tuxguitar.android.fragment.TGCachedFragment;
 import app.tuxguitar.android.menu.controller.impl.fragment.TGMainMenu;
+import app.tuxguitar.android.view.practice.TGBottomBars;
 
 public class TGMainFragment extends TGCachedFragment {
 
@@ -19,6 +22,11 @@ public class TGMainFragment extends TGCachedFragment {
 	public void onPostCreate(Bundle savedInstanceState) {
 		this.attachInstance();
 		this.createActionBar(true, false, R.string.app_name);
+	}
+
+	@Override
+	public void onPostInflateView() {
+		TGBottomBars.bind((ComposeView) this.getView().findViewById(R.id.main_bottom_bars), this.findContext());
 	}
 
 	@Override
