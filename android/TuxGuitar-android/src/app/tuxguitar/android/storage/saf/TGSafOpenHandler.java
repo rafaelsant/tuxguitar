@@ -1,5 +1,7 @@
 package app.tuxguitar.android.storage.saf;
 
+import app.tuxguitar.android.storage.recent.TGRecentFiles;
+
 import android.app.Activity;
 import android.content.Intent;
 
@@ -13,6 +15,7 @@ public class TGSafOpenHandler extends TGSafBaseHandler {
 		super.onActivityResult(resultCode, data);
 
 		if( resultCode == Activity.RESULT_OK && data != null ) {
+			TGRecentFiles.add(this.getProvider().getActivity(), data.getData());
 			this.getProvider().getActionHandler().callReadUri(data.getData());
 		}
 	}

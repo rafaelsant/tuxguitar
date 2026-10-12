@@ -48,6 +48,9 @@ import app.tuxguitar.android.action.impl.track.TGGoToTrackAction
 import app.tuxguitar.android.activity.TGActivity
 import app.tuxguitar.android.application.TGApplicationUtil
 import app.tuxguitar.android.fragment.impl.TGChannelListFragmentController
+import app.tuxguitar.android.storage.recent.TGRecentFile
+import app.tuxguitar.android.storage.recent.TGRecentFiles
+import app.tuxguitar.android.storage.saf.TGSafActionHandler
 import app.tuxguitar.android.view.compose.TGComposeTheme
 import app.tuxguitar.android.view.dialog.info.TGSongInfoDialogController
 import app.tuxguitar.android.view.practice.TGAppMode
@@ -84,10 +87,12 @@ private class TrackItem(val track: TGTrack, val name: String, val tuning: String
 private fun MainDrawer(context: TGContext, activity: TGActivity) {
 	var tracks by remember { mutableStateOf(listOf<TrackItem>()) }
 	var songName by remember { mutableStateOf<String?>(null) }
+	var recent by remember { mutableStateOf(listOf<TGRecentFile>()) }
 
 	// the track list follows song edits and the caret; polling keeps this simple
 	LaunchedEffect(Unit) {
 		while (true) {
+			recent = runCatching { TGRecentFiles.list(activity).take(5) }.getOrDefault(listOf())
 			runCatching {
 				val song = TGDocumentManager.getInstance(context).song
 				val selected = TGSongViewController.getInstance(context).caret.track
@@ -114,6 +119,20 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 			songName?.let {
 				Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
 			}
+		}
+
+		// ---- recent songs: reopening yesterday's song is the most common action when practicing
+		if (recent.isNotEmpty()) {
+			SectionLabel(stringResource(R.string.main_drawer_recent))
+			recent.forEach { file ->
+				NavigationDrawerItem(
+					label = { Text(file.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+					selected = false,
+					onClick = { TGSafActionHandler(context).callReadUri(file.uri) },
+					modifier = Modifier.padding(horizontal = 12.dp),
+				)
+			}
+			HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 		}
 
 		// ---- file: saving only in edit mode, so practicing never overwrites a song by accident
