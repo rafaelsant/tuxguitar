@@ -29,7 +29,9 @@ import app.tuxguitar.android.menu.controller.impl.contextual.TGVelocityMenu;
 import app.tuxguitar.android.menu.controller.impl.contextual.TGViewMenu;
 import app.tuxguitar.android.menu.util.TGToggleStyledIconHandler;
 import app.tuxguitar.android.menu.util.TGToggleStyledIconHelper;
+import app.tuxguitar.android.view.dialog.TGDialogController;
 import app.tuxguitar.android.view.dialog.tempo.TGTempoDialogController;
+import app.tuxguitar.android.view.dialog.transport.TGTransportModeDialogController;
 import app.tuxguitar.android.view.tablature.TGSongViewController;
 import app.tuxguitar.player.base.MidiPlayer;
 import app.tuxguitar.song.models.TGTempo;
@@ -58,6 +60,7 @@ public class TGMainMenu implements TGMenuController {
 	public void initializeItems(Menu menu) {
 		menu.findItem(R.id.action_tab_keyboard_toggle).setOnMenuItemClickListener(createActionProcessor(TGToggleTabKeyboardAction.NAME));
 		menu.findItem(R.id.action_transport_play).setOnMenuItemClickListener(createActionProcessor(TGTransportPlayAction.NAME));
+		menu.findItem(R.id.action_transport_mode).setOnMenuItemClickListener(createDialogActionProcessor(new TGTransportModeDialogController()));
 		menu.findItem(R.id.action_menu_edit).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGEditMenu(getActivity())));
 		menu.findItem(R.id.action_menu_view).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGViewMenu(getActivity())));
 		menu.findItem(R.id.action_menu_composition).setOnMenuItemClickListener(createContextMenuActionProcessor(new TGCompositionMenu(getActivity())));
@@ -131,6 +134,13 @@ public class TGMainMenu implements TGMenuController {
 		TGActionProcessorListener tgActionProcessor = new TGActionProcessorListener(getContext(), TGOpenFragmentAction.NAME);
 		tgActionProcessor.setAttribute(TGOpenFragmentAction.ATTRIBUTE_CONTROLLER, controller);
 		tgActionProcessor.setAttribute(TGOpenFragmentAction.ATTRIBUTE_ACTIVITY, getActivity());
+		return tgActionProcessor;
+	}
+
+	public TGActionProcessorListener createDialogActionProcessor(TGDialogController controller) {
+		TGActionProcessorListener tgActionProcessor = new TGActionProcessorListener(getContext(), TGOpenDialogAction.NAME);
+		tgActionProcessor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_CONTROLLER, controller);
+		tgActionProcessor.setAttribute(TGOpenDialogAction.ATTRIBUTE_DIALOG_ACTIVITY, getActivity());
 		return tgActionProcessor;
 	}
 

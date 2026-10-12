@@ -14,6 +14,11 @@
         android:title="@string/action_transport_play"
         app:showAsAction="always"/>
     <item
+        android:id="@+id/action_transport_mode"
+        android:icon="@drawable/ic_practice_white_24dp"
+        android:title="@string/action_transport_mode"
+        app:showAsAction="always"/>
+    <item
         android:id="@+id/action_tempo_display"
         android:title="@string/action_change_tempo"
         app:actionLayout="@layout/view_tempo_menu_item"
