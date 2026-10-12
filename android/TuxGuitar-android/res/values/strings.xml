@@ -191,10 +191,17 @@
 	<string name="tuner_auto">Auto</string>
 	<string name="tuner_reference">Reference note</string>
 	<string name="tuner_string_description">String %1$s</string>
-	<string name="tuner_permission_message">The tuner listens to your instrument through the microphone.</string>
+	<string name="tuner_permission_message">The tuner listens to your instrument through the microphone. The sound is analyzed on your phone and never recorded or sent.</string>
+	<string name="tuner_permission_blocked">Allow it in Settings → Permissions → Microphone.</string>
 	<string name="tuner_permission_button">Allow microphone</string>
 	<string name="tuner_permission_settings">Open app settings</string>
 	<string name="tuner_microphone_error">The microphone could not be opened.</string>
+	<string name="tuner_retry">Retry</string>
+	<string name="tuner_nearest_string">Nearest string %1$s</string>
+	<string name="tuner_playing_reference">Playing %1$s</string>
+	<string name="tuner_meter">Tuning meter</string>
+	<string name="tuner_string_locked">String %1$s, locked</string>
+	<string name="tuner_string_detected">String %1$s, detected</string>
 
 	<string name="action_track_tuning_list_item_edit">Edit</string>
 	<string name="action_track_tuning_list_item_remove">Remove</string>
