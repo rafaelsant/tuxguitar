@@ -21,9 +21,9 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - Barra flutuante de menu acima do player (`view/main/TGMainMenuBar.kt`): ☰ menu lateral, seletor de faixa, afinador, modo atual (menu com os nomes) e ⋮. Ela some enquanto a partitura rola e quando as opções de prática estão abertas.
 - Três modos (`view/practice/TGAppModeController.kt`): Play (padrão), Practice e Edit. Salvar, teclado de tablatura e menus de edição só no modo Edit.
 - Afinador (`fragment/impl/TGTunerFragment.kt`, detector YIN em `view/tuner/TGPitchDetector.java`): usa as cordas da faixa atual e toca a nota de referência.
-- Barra de baixo arrastável com 3 alturas (`view/practice/TGBottomBars.kt`):
-  - Play: play/stop, BPM, loop.
-  - Practice: BPM com −5/+5, rampa de treino em BPM (de/até/incremento, contador de voltas), loop por compasso, metrônomo e count-in.
+- Player num `BottomSheetScaffold` do Material 3 (`view/practice/TGBottomBars.kt`, `TGMainScreen`): recolhido mostra os botões; puxado para cima, as opções.
+  - Play: play/stop, BPM, loop. Puxado até embaixo, o player some e fica só um botão flutuante de play (e um pequeno para trazê-lo de volta).
+  - Practice: BPM com −5/+5 e % da velocidade original, voltar ao começo (do loop, ou de onde o play começou; tocando, segue na mesma velocidade), rampa de treino em BPM (de/até/incremento, contador de voltas), loop por compasso, metrônomo e count-in de 0, 1 ou 2 compassos (só no início, não a cada volta do loop).
   - As configurações de prática ficam em `TGPracticeSession`/`TGPracticePlayer`.
 - Loop pela tablatura: no modo Practice, toque longo + arrastar sobre os compassos define o trecho (`TGSongViewGestureDetector`).
 - Afinação (nomes das notas) ao lado da primeira pauta de tablatura (`TGLayout.DISPLAY_TUNING`).
@@ -48,7 +48,6 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - Afinador: validar no aparelho as cordas graves (Drop C, 7 cordas) sem salto de oitava.
 - Teclado de tablatura em Compose, se a edição pelo celular for muito usada.
 - Remover o código da action bar legada (`TGMainMenu`, `TGActivityActionBarController`) e dar ao navegador de arquivos opcional uma barra própria, ou removê-lo.
-- Count-in de mais de 1 compasso.
 
 ## Regras
 - Mudanças em branches, commits pequenos, nada no master do upstream.

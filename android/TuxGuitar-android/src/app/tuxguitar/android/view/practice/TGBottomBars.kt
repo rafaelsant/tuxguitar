@@ -232,8 +232,8 @@ private fun MainScreen(context: TGContext, session: TGPracticeSession, modeContr
 						onTilesHeight = { tilesHeight = it },
 						onSettingsChange = { session.settings = it },
 						onPlayPause = { player.playPause(settings) },
+						onRestart = { player.restart(settings) },
 						onMetronome = { player.toggleMetronome() },
-						onCountIn = { player.toggleCountIn() },
 					)
 					TGAppMode.EDIT -> Unit
 				}
@@ -336,8 +336,8 @@ private fun PracticeBar(
 	onTilesHeight: (Int) -> Unit,
 	onSettingsChange: (TGPracticeSettings) -> Unit,
 	onPlayPause: () -> Unit,
+	onRestart: () -> Unit,
 	onMetronome: () -> Unit,
-	onCountIn: () -> Unit,
 ) {
 	val expanded = sheet.expanded
 	val base = snapshot.baseTempo
@@ -368,7 +368,7 @@ private fun PracticeBar(
 				)
 			}
 
-			// row 1: speed and play
+			// row 1: speed, back to the start and play
 			Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
 				val sounding = when {
 					snapshot.running -> snapshot.currentPercent
@@ -379,19 +379,33 @@ private fun PracticeBar(
 				val pending = snapshot.running && !settings.training && settings.fixedPercent != snapshot.currentPercent
 				val fixedBpm = TGTempoMath.bpm(base, settings.fixedPercent)
 				fun stepFixed(delta: Int) = onSettingsChange(settings.copy(fixedPercent = TGTempoMath.stepPercent(base, settings.fixedPercent, fixedBpm + delta)))
+				// narrower steps leave room for the percentage under the speed and for the restart tile
+				val step = Modifier.width(STEP_TILE_WIDTH).height(TILE_SIZE)
 				if (!settings.training) {
-					TextTile("−5", stringResource(R.string.practice_slower), showLabel = false) { stepFixed(-5) }
+					TextTile("−5", stringResource(R.string.practice_slower), showLabel = false, modifier = step) { stepFixed(-5) }
 				}
 				// the speed tile opens the options, for 1 BPM steps and training
 				ValueTile(
 					value = TGTempoMath.bpm(base, sounding).toString(),
-					label = if (pending) stringResource(R.string.practice_next_speed, fixedBpm) else stringResource(R.string.practice_bpm_unit),
+					label = if (pending) {
+						stringResource(R.string.practice_next_speed, fixedBpm)
+					} else {
+						stringResource(R.string.practice_bpm_percent, sounding)
+					},
 					checked = expanded || pending,
+					modifier = Modifier.width(SPEED_TILE_WIDTH).height(TILE_SIZE),
 					onClick = { sheet.toggle() },
 				)
 				if (!settings.training) {
-					TextTile("+5", stringResource(R.string.practice_faster), showLabel = false) { stepFixed(5) }
+					TextTile("+5", stringResource(R.string.practice_faster), showLabel = false, modifier = step) { stepFixed(5) }
 				}
+				IconTile(
+					R.drawable.ic_bar_replay_24dp,
+					R.string.practice_restart,
+					checked = false,
+					description = stringResource(R.string.practice_restart_description),
+					onClick = onRestart,
+				)
 				PlayTile(snapshot.running, onPlayPause, Modifier.weight(1f))
 			}
 
@@ -402,7 +416,23 @@ private fun PracticeBar(
 			) {
 				val wide = Modifier.weight(1f).height(TILE_SIZE)
 				IconTile(R.drawable.ic_bar_metronome_24dp, R.string.practice_metronome, checked = snapshot.metronome, modifier = wide, onClick = onMetronome)
-				TextTile("3", stringResource(R.string.practice_count_in), checked = snapshot.countIn, modifier = wide, onClick = onCountIn)
+				// off, 1 bar, 2 bars
+				val countIn = settings.countInBars
+				TextTile(
+					text = if (countIn > 0) countIn.toString() else stringResource(R.string.practice_count_in_off),
+					label = stringResource(R.string.practice_count_in),
+					description = stringResource(
+						when (countIn) {
+							0 -> R.string.practice_count_in_state_off
+							1 -> R.string.practice_count_in_state_one
+							else -> R.string.practice_count_in_state_two
+						},
+					),
+					checked = countIn > 0,
+					modifier = wide,
+				) {
+					onSettingsChange(settings.copy(countInBars = (countIn + 1) % (TGPracticePlayer.MAX_COUNT_IN_BARS + 1)))
+				}
 				// training always loops, so its loop tile would only be a disabled one
 				if (!settings.training) {
 					IconTile(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, checked = settings.loop, modifier = wide) {
@@ -565,6 +595,8 @@ private fun PracticeOptions(
 // ---------------------------------------------------------------- shared pieces
 
 private val TILE_SIZE = 60.dp
+private val STEP_TILE_WIDTH = 48.dp
+private val SPEED_TILE_WIDTH = 72.dp
 private val TILE_SPACING = 10.dp
 private val TILE_SHAPE = RoundedCornerShape(16.dp)
 private val LABEL_SIZE = 12.sp
@@ -604,11 +636,12 @@ private fun IconTile(
 	label: Int,
 	checked: Boolean,
 	enabled: Boolean = true,
+	description: String? = null,
 	modifier: Modifier = Modifier.size(TILE_SIZE),
 	onClick: () -> Unit,
 ) {
 	val text = stringResource(label)
-	Tile(text, checked, enabled, onClick, modifier) {
+	Tile(description ?: text, checked, enabled, onClick, modifier) {
 		Column(horizontalAlignment = Alignment.CenterHorizontally) {
 			Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(26.dp))
 			Text(text, fontSize = LABEL_SIZE, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -621,12 +654,13 @@ private fun IconTile(
 private fun TextTile(
 	text: String,
 	label: String,
+	description: String = label,
 	checked: Boolean = false,
 	modifier: Modifier = Modifier.size(TILE_SIZE),
 	showLabel: Boolean = true,
 	onClick: () -> Unit,
 ) {
-	Tile(label, checked, true, onClick, modifier) {
+	Tile(description, checked, true, onClick, modifier) {
 		Column(horizontalAlignment = Alignment.CenterHorizontally) {
 			Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
 			if (showLabel) {
@@ -638,8 +672,14 @@ private fun TextTile(
 
 /** Square tile showing a value (like the BPM) with a small label below it. */
 @Composable
-private fun ValueTile(value: String, label: String, checked: Boolean = false, onClick: (() -> Unit)? = null) {
-	Tile("$value $label", checked, true, onClick, Modifier.size(TILE_SIZE)) {
+private fun ValueTile(
+	value: String,
+	label: String,
+	checked: Boolean = false,
+	modifier: Modifier = Modifier.size(TILE_SIZE),
+	onClick: (() -> Unit)? = null,
+) {
+	Tile("$value $label", checked, true, onClick, modifier) {
 		Column(horizontalAlignment = Alignment.CenterHorizontally) {
 			Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
 			Text(label, fontSize = LABEL_SIZE, maxLines = 1, overflow = TextOverflow.Ellipsis)
