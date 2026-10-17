@@ -37,6 +37,18 @@ public abstract class TGCachedFragment extends TGBaseFragment {
 		}
 	}
 
+	// stacked screens are hidden instead of removed while another screen is on top of them
+	@Override
+	public void onHiddenChanged(boolean hidden) {
+		super.onHiddenChanged(hidden);
+
+		if( hidden ) {
+			this.onHideView();
+		} else {
+			this.onShowView();
+		}
+	}
+
 	/** False makes the fragment inflate a new view each time it is shown, instead of reusing the first one. */
 	protected boolean isViewCached() {
 		return true;

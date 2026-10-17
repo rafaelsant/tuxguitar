@@ -77,6 +77,9 @@ class TGChannelListFragment : TGCachedFragment(R.layout.view_compose_modal) {
 	private var tracks by mutableStateOf(listOf<TrackItem>())
 	private var channels by mutableStateOf(listOf<ChannelItem>())
 
+	// a new Compose view each time the screen is opened (it is cached by its controller)
+	override fun isViewCached(): Boolean = false
+
 	override fun onPostCreate(savedInstanceState: Bundle?) {
 		TGChannelListFragmentController.getInstance(findContext()).attachInstance(this)
 		createActionBar(false, false, R.string.channel_list)

@@ -1,11 +1,14 @@
 package app.tuxguitar.android.navigation;
 
+import androidx.fragment.app.Fragment;
+
 import app.tuxguitar.android.fragment.TGFragmentController;
 
 public class TGNavigationFragment {
 
 	private String tagId;
 	private TGFragmentController<?> controller;
+	private Fragment fragment;
 
 	public TGNavigationFragment() {
 		super();
@@ -25,6 +28,15 @@ public class TGNavigationFragment {
 
 	public void setController(TGFragmentController<?> controller) {
 		this.controller = controller;
+	}
+
+	/** The fragment shown for this screen while it is in the stack (not part of equals: it identifies the screen). */
+	public Fragment getFragment() {
+		return fragment;
+	}
+
+	public void setFragment(Fragment fragment) {
+		this.fragment = fragment;
 	}
 
 	public int hashCode() {

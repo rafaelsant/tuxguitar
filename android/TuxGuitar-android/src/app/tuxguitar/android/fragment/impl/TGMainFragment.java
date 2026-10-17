@@ -47,6 +47,7 @@ public class TGMainFragment extends TGCachedFragment {
 	@Override
 	public void onShowView() {
 		this.findActivity().setLegacyActionBarVisible(false);
+		TGMainMenuBar.restoreStatusBar(this.findActivity());
 	}
 
 	@Override

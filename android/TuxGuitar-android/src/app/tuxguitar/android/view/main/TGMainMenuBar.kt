@@ -112,6 +112,14 @@ object TGMainMenuBar {
 			}
 		}
 	}
+
+	/** Status bar in the score color again, when the main screen is shown after a screen stacked on it. */
+	@JvmStatic
+	fun restoreStatusBar(activity: TGActivity) {
+		val dark = (activity.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+			android.content.res.Configuration.UI_MODE_NIGHT_YES
+		colorStatusBar(activity.findContext(), activity, dark)
+	}
 }
 
 @Composable

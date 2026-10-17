@@ -55,6 +55,9 @@ abstract class TGComposeModalFragment(private val titleId: Int) : TGModalFragmen
 	/** Called before the content is shown: read the dialog attributes into Compose state here. */
 	protected open fun initState() {}
 
+	// a new Compose view each time the dialog is opened (it is cached by its controller)
+	override fun isViewCached(): Boolean = false
+
 	override fun onPostCreate(savedInstanceState: Bundle?) {
 		this.createActionBar(false, false, titleId)
 	}

@@ -14,7 +14,8 @@ import app.tuxguitar.event.TGEventListener;
 import app.tuxguitar.event.TGEventManager;
 import app.tuxguitar.util.TGContext;
 
-import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 public class TGNavigationManager {
 
@@ -46,25 +47,57 @@ public class TGNavigationManager {
 				TGNavigationManager.this.activity.dumpStateLater("load " + name);
 			}
 		});
-		FragmentManager fragmentManager = this.activity.getSupportFragmentManager();
-		fragmentManager.beginTransaction().replace(R.id.content_frame, nf.getController().getFragment()).commitAllowingStateLoss();
-
+		// Screens are stacked: a new screen is added on top and the one below stays in the window, hidden; going back
+		// only removes the screens above. Replacing the main screen and attaching it again on the way back left the
+		// window frozen on the phone.
+		FragmentTransaction transaction = this.activity.getSupportFragmentManager().beginTransaction();
 		TGNavigationFragment backFrom = null;
-		if( this.navigationFragments.contains(nf) ) {
-			int index = this.navigationFragments.indexOf(nf);
-			if( index >= 0 && index < this.navigationFragments.size() ) {
-				while(this.navigationFragments.size() > index) {
-					TGNavigationFragment removed = this.navigationFragments.remove( this.navigationFragments.size() - 1 );
-					if(!removed.equals(nf)) {
-						backFrom = removed;
-					}
+		int index = this.navigationFragments.indexOf(nf);
+		if( index >= 0 ) {
+			TGNavigationFragment existing = this.navigationFragments.get(index);
+			while( this.navigationFragments.size() > index + 1 ) {
+				TGNavigationFragment removed = this.navigationFragments.remove(this.navigationFragments.size() - 1);
+				if( removed.getFragment() != null ) {
+					transaction.remove(removed.getFragment());
 				}
+				backFrom = removed;
 			}
+			Fragment fragment = existing.getFragment();
+			if( fragment == null || !fragment.isAdded() ) {
+				fragment = nf.getController().getFragment();
+				existing.setFragment(fragment);
+				transaction.add(R.id.content_frame, fragment);
+			}
+			transaction.show(fragment);
+			nf = existing;
+		} else {
+			TGNavigationFragment current = this.getCurrentFragment();
+			if( current != null && current.getFragment() != null ) {
+				transaction.hide(current.getFragment());
+			}
+			Fragment fragment = nf.getController().getFragment();
+			nf.setFragment(fragment);
+			// shown explicitly: a reused fragment may still be marked hidden from an earlier stay in the stack
+			transaction.add(R.id.content_frame, fragment);
+			transaction.show(fragment);
+			this.navigationFragments.add(nf);
 		}
+		transaction.commitAllowingStateLoss();
 
-		this.navigationFragments.add( nf );
+		TGDiagnostics.log("screen stack: " + this.describeStack());
 		this.fireNavigationEvent(nf, backFrom);
-    }
+	}
+
+	private String describeStack() {
+		StringBuilder text = new StringBuilder();
+		for(TGNavigationFragment nf : this.navigationFragments) {
+			if( text.length() > 0 ) {
+				text.append(" > ");
+			}
+			text.append(nf.getController().getClass().getSimpleName());
+		}
+		return text.toString();
+	}
 
 	public TGNavigationFragment getCurrentFragment() {
 		if( this.navigationFragments.size() > 0 ) {
