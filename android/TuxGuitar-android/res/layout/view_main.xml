@@ -1,63 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Main screen: the score, the floating menu bar and the player sheet are drawn with Compose (TGMainScreen in
+     TGBottomBars.kt, a Material BottomSheetScaffold); the tab keyboard of edit mode sits below. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
 
-    <FrameLayout
-        android:id="@+id/main_top"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true">
-
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/main_bottom"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true">
-
-        <include layout="@layout/view_tab_keyboard" />
-
-        <!-- Play / practice bars, drawn with Compose (TGBottomBars.kt); empty in edit mode -->
-        <androidx.compose.ui.platform.ComposeView
-            android:id="@+id/main_bottom_bars"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/main_right"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true" >
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/main_left"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true">
-    </FrameLayout>
-
-    <FrameLayout
-        android:id="@+id/main_body"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/main_bottom"
-        android:layout_below="@+id/main_top"
-        android:layout_toLeftOf="@+id/main_right"
-        android:layout_toRightOf="@+id/main_left">
-
-        <include layout="@layout/view_tablature" />
-    </FrameLayout>
-
-    <!-- Floating menu bar drawn with Compose (TGMainMenuBar.kt), over the bottom of the score and above the player
-         or the tab keyboard. Touches outside the bar go through to the score. -->
     <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/main_menu_bar"
+        android:id="@+id/main_screen"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/main_bottom" />
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
-</RelativeLayout>
+    <include layout="@layout/view_tab_keyboard" />
+
+</LinearLayout>

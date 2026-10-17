@@ -40,6 +40,7 @@ public class TGSongView extends View {
 	private TGSongViewGestureDetector gestureDetector;
 
 	private Bitmap bufferedBitmap;
+	private float bottomSpace = -1;
 	private boolean painting;
 
 	public TGSongView(Context context) {
@@ -146,9 +147,17 @@ public class TGSongView extends View {
 		return this.getDefaultScale() * (artist ? HEADER_HEIGHT_DP : HEADER_HEIGHT_NO_ARTIST_DP);
 	}
 
-	/** Room below the score, so the floating menu bar never covers its last line. */
+	/** Room below the score, so the player sheet and the floating menu bar never cover its last line. */
 	public float getBottomSpace() {
-		return this.getDefaultScale() * BOTTOM_SPACE_DP;
+		return (this.bottomSpace >= 0 ? this.bottomSpace : this.getDefaultScale() * BOTTOM_SPACE_DP);
+	}
+
+	/** Set by the main screen from the height of the collapsed player sheet and the menu bar (pixels). */
+	public void setBottomSpace(float bottomSpace) {
+		if( this.bottomSpace != bottomSpace ) {
+			this.bottomSpace = bottomSpace;
+			this.redraw();
+		}
 	}
 
 	private void paintHeader(UIPainter painter, float headerHeight) {

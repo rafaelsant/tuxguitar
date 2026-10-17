@@ -1,33 +1,39 @@
 package app.tuxguitar.android.view.practice
 
 import android.widget.Toast
+import android.view.LayoutInflater
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.viewinterop.AndroidView
+import app.tuxguitar.android.view.main.TGMainMenuBarContent
+import app.tuxguitar.android.view.main.TGScoreScrollState
+import app.tuxguitar.android.view.tablature.TGSongView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.AnchoredDraggableState
-import androidx.compose.foundation.gestures.DraggableAnchors
-import androidx.compose.foundation.gestures.anchoredDraggable
-import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Velocity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.height
@@ -84,27 +90,48 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.tuxguitar.android.R
 import app.tuxguitar.android.view.compose.TGComposeTheme
-import app.tuxguitar.android.view.main.TGScoreScrollState
 import app.tuxguitar.android.view.compose.TGNumberField
 import app.tuxguitar.util.TGContext
 import kotlinx.coroutines.delay
 
 /** Bottom bars of the main screen: the play bar (play mode) and the practice bar (practice mode). */
-object TGBottomBars {
+/**
+ * The main screen in Compose: a Material BottomSheetScaffold whose content is the score (the TuxGuitar view) with the
+ * floating menu bar, and whose sheet is the player of the current mode (none in edit mode, where the tab keyboard
+ * sits below this view). The sheet follows the finger between its two sizes: the tiles, and the tiles with the
+ * practice options.
+ */
+object TGMainScreen {
 	@JvmStatic
 	fun bind(view: ComposeView, context: TGContext) {
 		val session = TGPracticeSession.getInstance(context)
 		val modeController = TGAppModeController.getInstance(context)
 		view.setContent {
 			TGComposeTheme {
-				TGBottomBarsContent(session, modeController)
+				MainScreen(context, session, modeController)
 			}
 		}
 	}
 }
 
+/** Open and close the player sheet from its tiles. */
+@OptIn(ExperimentalMaterial3Api::class)
+private class PlayerSheet(private val state: SheetState, private val scope: CoroutineScope) {
+	val expanded: Boolean
+		get() = state.currentValue == SheetValue.Expanded
+
+	fun expand() {
+		scope.launch { state.expand() }
+	}
+
+	fun toggle() {
+		scope.launch { if (expanded) state.partialExpand() else state.expand() }
+	}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TGBottomBarsContent(session: TGPracticeSession, modeController: TGAppModeController) {
+private fun MainScreen(context: TGContext, session: TGPracticeSession, modeController: TGAppModeController) {
 	val mode = modeController.mode
 	val player = session.player
 	// shared with the tablature, where long press and drag over measures sets the loop
@@ -126,36 +153,109 @@ private fun TGBottomBarsContent(session: TGPracticeSession, modeController: TGAp
 		if (mode == TGAppMode.PRACTICE) session.apply() else player.applyPlay(playLoop)
 	}
 
-	// the player has no listener for these values, so poll them while the bars are shown
+	// the player has no listener for these values, so poll them while the player is shown
 	LaunchedEffect(mode) {
 		while (mode != TGAppMode.EDIT) {
-			// no snapshot (and no bar) while there is no song or caret yet
+			// no snapshot (and no player) while there is no song or caret yet
 			snapshot = runCatching { player.snapshot(if (mode == TGAppMode.PRACTICE) latestSettings else null) }.getOrNull()
 			delay(200)
 		}
 	}
 
-	val current = snapshot ?: return
-	when (mode) {
-		TGAppMode.PLAY -> PlayBar(
-			snapshot = current,
-			loop = playLoop,
-			onPlayPause = { player.playPause(null) },
-			onStop = { player.stop() },
-			onLoopChange = {
-				playLoop = it
-				player.applyPlay(it)
-			},
+	val sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.PartiallyExpanded)
+	val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+	val scope = rememberCoroutineScope()
+	val sheet = remember(sheetState) { PlayerSheet(sheetState, scope) }
+	val density = LocalDensity.current
+	val current = snapshot
+	val hasSheet = mode != TGAppMode.EDIT && current != null
+	// the collapsed sheet shows the handle and the tiles, measured
+	var tilesHeight by remember { mutableIntStateOf(0) }
+	val peek = if (hasSheet && tilesHeight > 0) SHEET_HANDLE_HEIGHT + with(density) { tilesHeight.toDp() } else 0.dp
+
+	// the floating menu bar steps aside while the options are open
+	val expanded = hasSheet && sheet.expanded
+	DisposableEffect(expanded) {
+		TGScoreScrollState.playerExpanded = expanded
+		onDispose { TGScoreScrollState.playerExpanded = false }
+	}
+	// back to the tiles when the sheet goes away (edit mode)
+	LaunchedEffect(hasSheet) {
+		if (!hasSheet && sheetState.currentValue == SheetValue.Expanded) sheetState.partialExpand()
+	}
+
+	BottomSheetScaffold(
+		scaffoldState = scaffoldState,
+		sheetPeekHeight = peek,
+		sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+		sheetTonalElevation = 3.dp,
+		sheetSwipeEnabled = hasSheet,
+		sheetDragHandle = if (hasSheet) {
+			{ SheetHandle(sheet) }
+		} else null,
+		containerColor = Color.Transparent,
+		sheetContent = {
+			if (current != null) {
+				when (mode) {
+					TGAppMode.PLAY -> PlayBar(
+						snapshot = current,
+						loop = playLoop,
+						onTilesHeight = { tilesHeight = it },
+						onPlayPause = { player.playPause(null) },
+						onStop = { player.stop() },
+						onLoopChange = {
+							playLoop = it
+							player.applyPlay(it)
+						},
+					)
+					TGAppMode.PRACTICE -> PracticeBar(
+						snapshot = current,
+						settings = settings,
+						sheet = sheet,
+						onTilesHeight = { tilesHeight = it },
+						onSettingsChange = { session.settings = it },
+						onPlayPause = { player.playPause(settings) },
+						onMetronome = { player.toggleMetronome() },
+						onCountIn = { player.toggleCountIn() },
+					)
+					TGAppMode.EDIT -> Unit
+				}
+			}
+		},
+	) {
+		Box(modifier = Modifier.fillMaxSize()) {
+			// the score, kept below the collapsed sheet and the menu bar
+			val bottomSpace = with(density) { (peek + MENU_BAR_SPACE).toPx() }
+			AndroidView(
+				factory = { viewContext -> LayoutInflater.from(viewContext).inflate(R.layout.view_tablature, null) as TGSongView },
+				update = { it.setBottomSpace(bottomSpace) },
+				modifier = Modifier.fillMaxSize(),
+			)
+			TGMainMenuBarContent(context, Modifier.align(Alignment.BottomCenter).padding(bottom = peek))
+		}
+	}
+}
+
+private val SHEET_HANDLE_HEIGHT = 28.dp
+private val MENU_BAR_SPACE = 72.dp
+
+/** Drag handle of the sheet; a tap also opens or closes it. */
+@Composable
+private fun SheetHandle(sheet: PlayerSheet) {
+	Box(
+		modifier = Modifier
+			.fillMaxWidth()
+			.height(SHEET_HANDLE_HEIGHT)
+			.clickable(onClickLabel = stringResource(if (sheet.expanded) R.string.practice_collapse else R.string.practice_expand)) { sheet.toggle() },
+		contentAlignment = Alignment.Center,
+	) {
+		Box(
+			Modifier
+				.width(40.dp)
+				.height(4.dp)
+				.clip(RoundedCornerShape(2.dp))
+				.background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
 		)
-		TGAppMode.PRACTICE -> PracticeBar(
-			snapshot = current,
-			settings = settings,
-			onSettingsChange = { session.settings = it },
-			onPlayPause = { player.playPause(settings) },
-			onMetronome = { player.toggleMetronome() },
-			onCountIn = { player.toggleCountIn() },
-		)
-		TGAppMode.EDIT -> Unit
 	}
 }
 
@@ -165,13 +265,13 @@ private fun TGBottomBarsContent(session: TGPracticeSession, modeController: TGAp
 private fun PlayBar(
 	snapshot: TGPlayerSnapshot,
 	loop: Boolean,
+	onTilesHeight: (Int) -> Unit,
 	onPlayPause: () -> Unit,
 	onStop: () -> Unit,
 	onLoopChange: (Boolean) -> Unit,
 ) {
-	val sheet = rememberBarSheetState()
 	val bpm = TGTempoMath.bpm(snapshot.baseTempo, if (snapshot.running) snapshot.currentPercent else 100)
-	BarSheet(sheet) {
+	Column(modifier = Modifier.onSizeChanged { onTilesHeight(it.height) }.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
 		Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
 			// plain text, not a tile: it is not a control
 			Column(modifier = Modifier.width(TILE_SIZE), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -195,96 +295,98 @@ private fun PlayBar(
 private fun PracticeBar(
 	snapshot: TGPlayerSnapshot,
 	settings: TGPracticeSettings,
+	sheet: PlayerSheet,
+	onTilesHeight: (Int) -> Unit,
 	onSettingsChange: (TGPracticeSettings) -> Unit,
 	onPlayPause: () -> Unit,
 	onMetronome: () -> Unit,
 	onCountIn: () -> Unit,
 ) {
-	val sheet = rememberBarSheetState()
-	val expanded = sheet.level == SheetLevel.OPTIONS
+	val expanded = sheet.expanded
 	val base = snapshot.baseTempo
-	// the floating menu bar steps aside while the options are open
-	DisposableEffect(expanded) {
-		TGScoreScrollState.playerExpanded = expanded
-		onDispose { TGScoreScrollState.playerExpanded = false }
-	}
 
-	BarSheet(sheet, options = { PracticeOptions(snapshot, settings, onSettingsChange) }) {
-		if (settings.training) {
-			val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
-			Row(verticalAlignment = Alignment.CenterVertically) {
-				Text(
-					stringResource(R.string.practice_training_range, TGTempoMath.bpm(base, settings.fromPercent), TGTempoMath.bpm(base, settings.toPercent)),
-					style = MaterialTheme.typography.titleMedium,
-					maxLines = 1,
-					overflow = TextOverflow.Ellipsis,
-					modifier = Modifier.weight(1f),
+	Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+		// the tiles: what the collapsed sheet shows
+		Column(modifier = Modifier.onSizeChanged { onTilesHeight(it.height) }.padding(bottom = 12.dp)) {
+			if (settings.training) {
+				val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
+				Row(verticalAlignment = Alignment.CenterVertically) {
+					Text(
+						stringResource(R.string.practice_training_range, TGTempoMath.bpm(base, settings.fromPercent), TGTempoMath.bpm(base, settings.toPercent)),
+						style = MaterialTheme.typography.titleMedium,
+						maxLines = 1,
+						overflow = TextOverflow.Ellipsis,
+						modifier = Modifier.weight(1f),
+					)
+					Text(
+						stringResource(R.string.practice_training_step, step.first, step.second),
+						style = MaterialTheme.typography.titleMedium,
+						fontWeight = FontWeight.Bold,
+						color = MaterialTheme.colorScheme.primary,
+					)
+				}
+				LinearProgressIndicator(
+					progress = { step.first / step.second.toFloat() },
+					modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp),
 				)
-				Text(
-					stringResource(R.string.practice_training_step, step.first, step.second),
-					style = MaterialTheme.typography.titleMedium,
-					fontWeight = FontWeight.Bold,
-					color = MaterialTheme.colorScheme.primary,
+			}
+
+			// row 1: speed and play
+			Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
+				val sounding = when {
+					snapshot.running -> snapshot.currentPercent
+					settings.training -> settings.fromPercent
+					else -> settings.fixedPercent
+				}
+				// while playing, a new fixed speed only applies on the next loop pass: show it as pending
+				val pending = snapshot.running && !settings.training && settings.fixedPercent != snapshot.currentPercent
+				val fixedBpm = TGTempoMath.bpm(base, settings.fixedPercent)
+				fun stepFixed(delta: Int) = onSettingsChange(settings.copy(fixedPercent = TGTempoMath.stepPercent(base, settings.fixedPercent, fixedBpm + delta)))
+				if (!settings.training) {
+					TextTile("−5", stringResource(R.string.practice_slower), showLabel = false) { stepFixed(-5) }
+				}
+				// the speed tile opens the options, for 1 BPM steps and training
+				ValueTile(
+					value = TGTempoMath.bpm(base, sounding).toString(),
+					label = if (pending) stringResource(R.string.practice_next_speed, fixedBpm) else stringResource(R.string.practice_bpm_unit),
+					checked = expanded || pending,
+					onClick = { sheet.toggle() },
 				)
+				if (!settings.training) {
+					TextTile("+5", stringResource(R.string.practice_faster), showLabel = false) { stepFixed(5) }
+				}
+				PlayTile(snapshot.running, onPlayPause, Modifier.weight(1f))
 			}
-			LinearProgressIndicator(
-				progress = { step.first / step.second.toFloat() },
-				modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp),
-			)
-		}
 
-		// row 1: speed and play
-		Row(horizontalArrangement = Arrangement.spacedBy(TILE_SPACING), verticalAlignment = Alignment.CenterVertically) {
-			val sounding = when {
-				snapshot.running -> snapshot.currentPercent
-				settings.training -> settings.fromPercent
-				else -> settings.fixedPercent
-			}
-			// while playing, a new fixed speed only applies on the next loop pass: show it as pending
-			val pending = snapshot.running && !settings.training && settings.fixedPercent != snapshot.currentPercent
-			val fixedBpm = TGTempoMath.bpm(base, settings.fixedPercent)
-			fun stepFixed(delta: Int) = onSettingsChange(settings.copy(fixedPercent = TGTempoMath.stepPercent(base, settings.fixedPercent, fixedBpm + delta)))
-			if (!settings.training) {
-				TextTile("−5", stringResource(R.string.practice_slower), showLabel = false) { stepFixed(-5) }
-			}
-			// the speed tile opens the options, for 1 BPM steps and training
-			ValueTile(
-				value = TGTempoMath.bpm(base, sounding).toString(),
-				label = if (pending) stringResource(R.string.practice_next_speed, fixedBpm) else stringResource(R.string.practice_bpm_unit),
-				checked = expanded || pending,
-				onClick = { sheet.moveTo(if (expanded) SheetLevel.TILES else SheetLevel.OPTIONS) },
-			)
-			if (!settings.training) {
-				TextTile("+5", stringResource(R.string.practice_faster), showLabel = false) { stepFixed(5) }
-			}
-			PlayTile(snapshot.running, onPlayPause, Modifier.weight(1f))
-		}
-
-		// row 2: practice aids
-		Row(
-			horizontalArrangement = Arrangement.spacedBy(TILE_SPACING),
-			modifier = Modifier.padding(top = TILE_SPACING),
-		) {
-			val wide = Modifier.weight(1f).height(TILE_SIZE)
-			IconTile(R.drawable.ic_bar_metronome_24dp, R.string.practice_metronome, checked = snapshot.metronome, modifier = wide, onClick = onMetronome)
-			TextTile("3", stringResource(R.string.practice_count_in), checked = snapshot.countIn, modifier = wide, onClick = onCountIn)
-			// training always loops, so its loop tile would only be a disabled one
-			if (!settings.training) {
-				IconTile(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, checked = settings.loop, modifier = wide) {
-					onSettingsChange(settings.copy(loop = !settings.loop))
+			// row 2: practice aids
+			Row(
+				horizontalArrangement = Arrangement.spacedBy(TILE_SPACING),
+				modifier = Modifier.padding(top = TILE_SPACING),
+			) {
+				val wide = Modifier.weight(1f).height(TILE_SIZE)
+				IconTile(R.drawable.ic_bar_metronome_24dp, R.string.practice_metronome, checked = snapshot.metronome, modifier = wide, onClick = onMetronome)
+				TextTile("3", stringResource(R.string.practice_count_in), checked = snapshot.countIn, modifier = wide, onClick = onCountIn)
+				// training always loops, so its loop tile would only be a disabled one
+				if (!settings.training) {
+					IconTile(R.drawable.ic_bar_loop_24dp, R.string.practice_loop, checked = settings.loop, modifier = wide) {
+						onSettingsChange(settings.copy(loop = !settings.loop))
+					}
+				}
+				if (settings.isLooping) {
+					val start = if (settings.loopStart > 0) settings.loopStart else 1
+					val end = if (settings.loopEnd > 0) settings.loopEnd else snapshot.measureCount
+					TextTile(
+						text = if (start <= 1 && end >= snapshot.measureCount) stringResource(R.string.practice_whole_song_short) else "$start–$end",
+						label = stringResource(R.string.practice_section),
+						modifier = Modifier.weight(1.4f).height(TILE_SIZE),
+						onClick = { sheet.expand() },
+					)
 				}
 			}
-			if (settings.isLooping) {
-				val start = if (settings.loopStart > 0) settings.loopStart else 1
-				val end = if (settings.loopEnd > 0) settings.loopEnd else snapshot.measureCount
-				TextTile(
-					text = if (start <= 1 && end >= snapshot.measureCount) stringResource(R.string.practice_whole_song_short) else "$start–$end",
-					label = stringResource(R.string.practice_section),
-					modifier = Modifier.weight(1.4f).height(TILE_SIZE),
-					onClick = { sheet.moveTo(SheetLevel.OPTIONS) },
-				)
-			}
 		}
+
+		// dragged up: the options
+		PracticeOptions(snapshot, settings, onSettingsChange)
 	}
 }
 
@@ -429,163 +531,6 @@ private val TILE_SIZE = 60.dp
 private val TILE_SPACING = 10.dp
 private val TILE_SHAPE = RoundedCornerShape(16.dp)
 private val LABEL_SIZE = 12.sp
-
-/** Sheet sizes: only the handle (hidden, the most room for the score), the tiles, and the tiles with the options. */
-private enum class SheetLevel { HIDDEN, TILES, OPTIONS }
-
-/** Size of a bar sheet, dragged with the finger (Compose AnchoredDraggable) and saved across recompositions. */
-@OptIn(ExperimentalFoundationApi::class)
-private class BarSheetState(val draggable: AnchoredDraggableState<SheetLevel>, private val scope: CoroutineScope) {
-	val level: SheetLevel
-		get() = draggable.currentValue
-
-	fun moveTo(level: SheetLevel) {
-		scope.launch { draggable.animateTo(level) }
-	}
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun rememberBarSheetState(): BarSheetState {
-	val density = LocalDensity.current
-	var saved by rememberSaveable { mutableStateOf(SheetLevel.TILES) }
-	val decay = rememberSplineBasedDecay<Float>()
-	val draggable = remember {
-		AnchoredDraggableState(
-			initialValue = saved,
-			// past 40% of the way, or flung, it goes to the next size
-			positionalThreshold = { distance -> distance * 0.4f },
-			velocityThreshold = { with(density) { 120.dp.toPx() } },
-			snapAnimationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-			decayAnimationSpec = decay,
-		)
-	}
-	LaunchedEffect(draggable) {
-		snapshotFlow { draggable.currentValue }.collect { saved = it }
-	}
-	val scope = rememberCoroutineScope()
-	return remember(draggable) { BarSheetState(draggable, scope) }
-}
-
-/**
- * Bottom sheet of the player. It follows the finger and snaps to the nearest size (or the next one when flung), like
- * the Material bottom sheets: hidden (handle only), the [tiles], and the tiles with the [options]. Inside the options,
- * scrolling and dragging cooperate: at the top of the options, dragging down shrinks the sheet.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun BarSheet(
-	sheet: BarSheetState,
-	options: (@Composable ColumnScope.() -> Unit)? = null,
-	tiles: @Composable ColumnScope.() -> Unit,
-) {
-	val state = sheet.draggable
-	val density = LocalDensity.current
-	var handleHeight by remember { mutableIntStateOf(0) }
-	var tilesHeight by remember { mutableIntStateOf(0) }
-	var optionsHeight by remember { mutableIntStateOf(0) }
-	val hasOptions = options != null
-
-	// the sizes come from the measured content
-	LaunchedEffect(handleHeight, tilesHeight, optionsHeight, hasOptions) {
-		if (handleHeight > 0 && tilesHeight > 0) {
-			val hidden = handleHeight.toFloat()
-			val withTiles = hidden + tilesHeight
-			state.updateAnchors(DraggableAnchors {
-				SheetLevel.HIDDEN at hidden
-				SheetLevel.TILES at withTiles
-				if (hasOptions && optionsHeight > 0) {
-					SheetLevel.OPTIONS at withTiles + optionsHeight
-				}
-			})
-		}
-	}
-
-	val nestedScroll = remember(state) { sheetNestedScroll(state) }
-	val offset = state.offset
-	Surface(
-		shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-		tonalElevation = 3.dp,
-		modifier = Modifier
-			.fillMaxWidth()
-			.nestedScroll(nestedScroll)
-			// the offset is the visible height: dragging up makes it grow
-			.anchoredDraggable(state = state, reverseDirection = true, orientation = Orientation.Vertical),
-	) {
-		Box(
-			modifier = Modifier
-				.fillMaxWidth()
-				.then(if (offset.isNaN()) Modifier else Modifier.height(with(density) { offset.toDp() }))
-				.clipToBounds(),
-		) {
-			Column(modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).padding(horizontal = 16.dp)) {
-				Box(
-					modifier = Modifier
-						.fillMaxWidth()
-						.height(28.dp)
-						.onSizeChanged { handleHeight = it.height }
-						.clickable(onClickLabel = stringResource(if (sheet.level == SheetLevel.HIDDEN) R.string.practice_expand else R.string.practice_collapse)) {
-							// a tap opens one size more, and from the largest goes back to the tiles
-							sheet.moveTo(
-								when (sheet.level) {
-									SheetLevel.HIDDEN -> SheetLevel.TILES
-									SheetLevel.TILES -> if (hasOptions) SheetLevel.OPTIONS else SheetLevel.HIDDEN
-									SheetLevel.OPTIONS -> SheetLevel.TILES
-								}
-							)
-						},
-					contentAlignment = Alignment.Center,
-				) {
-					Box(
-						Modifier
-							.width(40.dp)
-							.height(4.dp)
-							.clip(RoundedCornerShape(2.dp))
-							.background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
-					)
-				}
-				Column(modifier = Modifier.onSizeChanged { tilesHeight = it.height }.padding(bottom = 12.dp)) {
-					tiles()
-				}
-				if (options != null) {
-					Column(modifier = Modifier.onSizeChanged { optionsHeight = it.height }) {
-						options()
-					}
-				}
-			}
-		}
-	}
-}
-
-/** Scrolling inside the sheet first resizes it (up to the largest size, down at the top of the content). */
-@OptIn(ExperimentalFoundationApi::class)
-private fun sheetNestedScroll(state: AnchoredDraggableState<SheetLevel>) = object : NestedScrollConnection {
-	override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-		val delta = available.y
-		// finger up: grow the sheet before scrolling its content
-		return if (delta < 0 && source == NestedScrollSource.Drag) Offset(0f, -state.dispatchRawDelta(-delta)) else Offset.Zero
-	}
-
-	override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-		// finger down with the content already at its top: shrink the sheet
-		return if (source == NestedScrollSource.Drag) Offset(0f, -state.dispatchRawDelta(-available.y)) else Offset.Zero
-	}
-
-	override suspend fun onPreFling(available: Velocity): Velocity {
-		val offset = state.offset
-		return if (available.y < 0 && !offset.isNaN() && offset < state.anchors.maxAnchor()) {
-			state.settle(-available.y)
-			available
-		} else {
-			Velocity.Zero
-		}
-	}
-
-	override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-		state.settle(-available.y)
-		return available
-	}
-}
 
 @Composable
 private fun Tile(

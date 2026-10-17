@@ -104,14 +104,6 @@ import kotlinx.coroutines.delay
  * and the overflow menu. There is no top bar: the score starts under the status bar, with the song title as its header.
  */
 object TGMainMenuBar {
-	@JvmStatic
-	fun bind(view: ComposeView, context: TGContext) {
-		view.setContent {
-			TGComposeTheme {
-				MainMenuBar(context)
-			}
-		}
-	}
 
 	/** Status bar in the score color again, when the main screen is shown after a screen stacked on it. */
 	@JvmStatic
@@ -119,6 +111,14 @@ object TGMainMenuBar {
 		val dark = (activity.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
 			android.content.res.Configuration.UI_MODE_NIGHT_YES
 		colorStatusBar(activity.findContext(), activity, dark)
+	}
+}
+
+/** The floating menu bar, placed by the main screen just above the player sheet. */
+@Composable
+fun TGMainMenuBarContent(context: TGContext, modifier: Modifier) {
+	Box(modifier = modifier) {
+		MainMenuBar(context)
 	}
 }
 

@@ -14,7 +14,7 @@ import app.tuxguitar.android.view.main.TGMainMenuBar;
 import app.tuxguitar.android.view.keyboard.TGTabKeyboardController;
 import app.tuxguitar.android.view.practice.TGAppMode;
 import app.tuxguitar.android.view.practice.TGAppModeController;
-import app.tuxguitar.android.view.practice.TGBottomBars;
+import app.tuxguitar.android.view.practice.TGMainScreen;
 
 public class TGMainFragment extends TGCachedFragment {
 
@@ -37,8 +37,7 @@ public class TGMainFragment extends TGCachedFragment {
 
 	@Override
 	public void onPostInflateView() {
-		TGMainMenuBar.bind((ComposeView) this.getView().findViewById(R.id.main_menu_bar), this.findContext());
-		TGBottomBars.bind((ComposeView) this.getView().findViewById(R.id.main_bottom_bars), this.findContext());
+		TGMainScreen.bind((ComposeView) this.getView().findViewById(R.id.main_screen), this.findContext());
 		// the new tab keyboard follows the current mode
 		TGTabKeyboardController.getInstance(this.findContext()).setVisible(TGAppModeController.getInstance(this.findContext()).getMode() == TGAppMode.EDIT);
 	}
@@ -60,26 +59,6 @@ public class TGMainFragment extends TGCachedFragment {
 			return this.getView().findViewById(id);
 		}
 		return null;
-	}
-
-	public View getTopView() {
-		return this.findChildViewById(R.id.main_top);
-	}
-
-	public View getBottomView() {
-		return this.findChildViewById(R.id.main_bottom);
-	}
-
-	public View getLeftView() {
-		return this.findChildViewById(R.id.main_left);
-	}
-
-	public View getRightView() {
-		return this.findChildViewById(R.id.main_right);
-	}
-
-	public View getBodyView() {
-		return this.findChildViewById(R.id.main_body);
 	}
 
 	public void attachInstance() {
