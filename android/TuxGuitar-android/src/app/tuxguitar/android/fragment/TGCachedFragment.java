@@ -31,6 +31,15 @@ public abstract class TGCachedFragment extends TGBaseFragment {
 		this.onHideView();
 
 		super.onDestroyView();
+
+		if(!this.isViewCached()) {
+			this.view = null;
+		}
+	}
+
+	/** False makes the fragment inflate a new view each time it is shown, instead of reusing the first one. */
+	protected boolean isViewCached() {
+		return true;
 	}
 
 	@Override
