@@ -567,11 +567,12 @@
 	<string name="practice_metronome">Metronome</string>
 	<string name="practice_count_in">Count-in</string>
 	<string name="practice_count_in_off">Off</string>
+	<string name="practice_count_in_one">1 bar</string>
+	<string name="practice_count_in_two">2 bars</string>
 	<string name="practice_count_in_state_off">Count-in off</string>
 	<string name="practice_count_in_state_one">Count-in: 1 bar</string>
 	<string name="practice_count_in_state_two">Count-in: 2 bars</string>
 	<string name="practice_restart">Restart</string>
-	<string name="practice_restart_description">Back to the start</string>
 	<string name="practice_bpm_percent">BPM · %1$d%%</string>
 	<string name="practice_expand">More options</string>
 	<string name="practice_collapse">Fewer options</string>
