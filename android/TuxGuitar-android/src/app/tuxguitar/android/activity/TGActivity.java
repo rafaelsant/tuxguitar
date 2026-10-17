@@ -504,6 +504,7 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 	public void dumpStateLater(final String reason) {
 		final View root = this.findViewById(R.id.root_layout);
 		if( root != null ) {
+			TGDiagnostics.watchFrames(this);
 			root.postDelayed(new Runnable() {
 				public void run() {
 					TGDiagnostics.dumpState(TGActivity.this, reason + ", after 1.5 s");

@@ -123,11 +123,57 @@ object TGDiagnostics {
 		log(message + "\n" + android.util.Log.getStackTraceString(throwable))
 	}
 
+	// ---- frame counters: tell "nothing asks the window to draw" from "it draws but no frame is rendered"
+
+	@Volatile private var choreographerFrames = 0
+	@Volatile private var layouts = 0
+	@Volatile private var preDraws = 0
+	@Volatile private var draws = 0
+	@Volatile private var renderedFrames = 0
+	@Volatile private var frameWatchUntil = 0L
+	private var frameWatchInstalled = false
+
+	/** Counts, for a few seconds from now, Choreographer frames, layouts, draws and frames the renderer finished. */
+	@JvmStatic
+	fun watchFrames(activity: androidx.appcompat.app.AppCompatActivity) {
+		choreographerFrames = 0
+		layouts = 0
+		preDraws = 0
+		draws = 0
+		renderedFrames = 0
+		frameWatchUntil = SystemClock.uptimeMillis() + 6000
+		runCatching {
+			if (!frameWatchInstalled) {
+				frameWatchInstalled = true
+				val observer = activity.window.decorView.viewTreeObserver
+				observer.addOnGlobalLayoutListener { layouts++ }
+				observer.addOnPreDrawListener { preDraws++; true }
+				observer.addOnDrawListener { draws++ }
+				activity.window.addOnFrameMetricsAvailableListener({ _, _, _ -> renderedFrames++ }, Handler(Looper.getMainLooper()))
+			}
+			val callback = object : android.view.Choreographer.FrameCallback {
+				override fun doFrame(frameTimeNanos: Long) {
+					choreographerFrames++
+					if (SystemClock.uptimeMillis() < frameWatchUntil) {
+						android.view.Choreographer.getInstance().postFrameCallback(this)
+					}
+				}
+			}
+			android.view.Choreographer.getInstance().postFrameCallback(callback)
+		}.onFailure { log("frame watch failed", it) }
+	}
+
 	/** Writes the state of the screen to the log: window focus, action bar, side menu, fragments and the views. */
 	@JvmStatic
 	fun dumpState(activity: androidx.appcompat.app.AppCompatActivity, reason: String) {
 		runCatching {
 			val text = StringBuilder("STATE (").append(reason).append(")\n")
+			text.append("  since the screen change: choreographer frames=").append(choreographerFrames)
+				.append(" layouts=").append(layouts).append(" predraws=").append(preDraws)
+				.append(" draws=").append(draws).append(" rendered frames=").append(renderedFrames).append('\n')
+			val decor = activity.window.decorView
+			text.append("  decor dirty=").append(decor.isDirty).append(" layoutRequested=").append(decor.isLayoutRequested)
+				.append(" hardwareAccelerated=").append(decor.isHardwareAccelerated).append('\n')
 			text.append("  window focus=").append(activity.hasWindowFocus())
 				.append(" lifecycle=").append(activity.lifecycle.currentState)
 				.append(" actionBar showing=").append(activity.supportActionBar?.isShowing).append('\n')
