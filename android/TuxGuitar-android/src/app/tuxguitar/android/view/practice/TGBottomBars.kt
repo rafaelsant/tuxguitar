@@ -1,6 +1,12 @@
 package app.tuxguitar.android.view.practice
 
 import android.widget.Toast
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SmallFloatingActionButton
 import android.view.LayoutInflater
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.BottomSheetScaffold
@@ -162,7 +168,13 @@ private fun MainScreen(context: TGContext, session: TGPracticeSession, modeContr
 		}
 	}
 
-	val sheetState = rememberStandardBottomSheetState(initialValue = SheetValue.PartiallyExpanded)
+	// in play mode the sheet can be pulled all the way down: only a play button stays, for the most room
+	val canHide by rememberUpdatedState(mode == TGAppMode.PLAY)
+	val sheetState = rememberStandardBottomSheetState(
+		initialValue = SheetValue.PartiallyExpanded,
+		confirmValueChange = { it != SheetValue.Hidden || canHide },
+		skipHiddenState = false,
+	)
 	val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
 	val scope = rememberCoroutineScope()
 	val sheet = remember(sheetState) { PlayerSheet(sheetState, scope) }
@@ -179,10 +191,15 @@ private fun MainScreen(context: TGContext, session: TGPracticeSession, modeContr
 		TGScoreScrollState.playerExpanded = expanded
 		onDispose { TGScoreScrollState.playerExpanded = false }
 	}
-	// back to the tiles when the sheet goes away (edit mode)
-	LaunchedEffect(hasSheet) {
-		if (!hasSheet && sheetState.currentValue == SheetValue.Expanded) sheetState.partialExpand()
+	// back to the tiles when the sheet goes away (edit mode), and out of hiding outside play mode
+	LaunchedEffect(hasSheet, mode) {
+		val value = sheetState.currentValue
+		if ((!hasSheet && value == SheetValue.Expanded) || (mode != TGAppMode.PLAY && value == SheetValue.Hidden)) {
+			sheetState.partialExpand()
+		}
 	}
+	val hidden = hasSheet && sheetState.targetValue == SheetValue.Hidden
+	val sheetSpace = if (hidden) 0.dp else peek
 
 	BottomSheetScaffold(
 		scaffoldState = scaffoldState,
@@ -225,13 +242,33 @@ private fun MainScreen(context: TGContext, session: TGPracticeSession, modeContr
 	) {
 		Box(modifier = Modifier.fillMaxSize()) {
 			// the score, kept below the collapsed sheet and the menu bar
-			val bottomSpace = with(density) { (peek + MENU_BAR_SPACE).toPx() }
+			val bottomSpace = with(density) { (sheetSpace + MENU_BAR_SPACE).toPx() }
 			AndroidView(
 				factory = { viewContext -> LayoutInflater.from(viewContext).inflate(R.layout.view_tablature, null) as TGSongView },
 				update = { it.setBottomSpace(bottomSpace) },
 				modifier = Modifier.fillMaxSize(),
 			)
-			TGMainMenuBarContent(context, Modifier.align(Alignment.BottomCenter).padding(bottom = peek))
+			TGMainMenuBarContent(context, Modifier.align(Alignment.BottomCenter).padding(bottom = sheetSpace))
+			// the player pulled down: play / pause in the corner, and a small button to bring the player back
+			AnimatedVisibility(
+				visible = hidden && current != null,
+				enter = fadeIn() + scaleIn(),
+				exit = fadeOut() + scaleOut(),
+				modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = MENU_BAR_SPACE + 8.dp),
+			) {
+				Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+					SmallFloatingActionButton(onClick = { scope.launch { sheetState.partialExpand() } }) {
+						Icon(painterResource(R.drawable.ic_bar_expand_less_24dp), stringResource(R.string.main_show_player))
+					}
+					val running = current?.running == true
+					FloatingActionButton(onClick = { player.playPause(null) }) {
+						Icon(
+							painterResource(if (running) R.drawable.ic_bar_pause_24dp else R.drawable.ic_bar_play_24dp),
+							stringResource(if (running) R.string.practice_pause else R.string.practice_play),
+						)
+					}
+				}
+			}
 		}
 	}
 }

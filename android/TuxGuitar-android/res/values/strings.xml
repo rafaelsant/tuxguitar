@@ -183,6 +183,7 @@
 	<string name="main_mode_description">Mode: %1$s. Change mode</string>
 	<string name="main_track_description">Track: %1$s. Change track</string>
 
+	<string name="main_show_player">Show the player</string>
 	<string name="tuner_title">Tuner</string>
 	<string name="preferences_debug_log_title">Debug log</string>
 	<string name="preferences_debug_log_summary">Share what the app did in the last screen changes with the developer</string>
