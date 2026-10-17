@@ -38,13 +38,16 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
   - popups de escolha, confirmação e mensagem (AlertDialog padrão, mantidos de propósito);
   - editores de pontos de bend e tremolo bar (Views embutidas nos diálogos Compose).
 - A tablatura é desenhada em Canvas pelo motor do TuxGuitar e não migra para Compose.
+- Navegação em pilha (`navigation/TGNavigationManager.java`): abrir uma tela a empilha sobre a atual, que fica escondida na janela; voltar só remove as telas de cima. Não voltar a usar `replace`: tirar a tela principal da janela e recolocá-la na volta deixava a janela congelada no aparelho.
+- Sem action bar (tema `NoActionBar`): as telas Compose têm barra própria (`view/compose/TGScreenTopBar.kt`). O navegador de arquivos interno (opcional) ficou sem o menu que ficava nela.
+- Diagnóstico para testar pelo celular (`application/TGDiagnostics.kt`): detector de travamento da thread principal, registro de crashes e um log de navegação, compartilháveis em Configurações ("Debug log" e "Freeze or crash report").
 - Validação de UI: usar um agente revisor de UI/UX antes de fechar telas novas.
 - A verificar: issue aberta #1146 do upstream (repetições em modo loop).
 
 ## Próximos passos
 - Afinador: validar no aparelho as cordas graves (Drop C, 7 cordas) sem salto de oitava.
 - Teclado de tablatura em Compose, se a edição pelo celular for muito usada.
-- Remover a action bar legada (hoje sempre escondida, só o navegador de arquivos opcional a mostra) e o `TGMainMenu`.
+- Remover o código da action bar legada (`TGMainMenu`, `TGActivityActionBarController`) e dar ao navegador de arquivos opcional uma barra própria, ou removê-lo.
 - Count-in de mais de 1 compasso.
 
 ## Regras

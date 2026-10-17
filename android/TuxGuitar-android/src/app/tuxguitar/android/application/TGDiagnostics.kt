@@ -21,7 +21,6 @@ object TGDiagnostics {
 	private const val FILE = "diagnostic-report.txt"
 	private const val LOG_FILE = "debug-log.txt"
 	private const val LOG_MAX_BYTES = 256 * 1024
-	private const val DUMP_MAX_LINES = 150
 	private const val CHECK_MILLIS = 1000L
 	private const val STALL_MILLIS = 5000L
 	private const val MAX_FRAMES = 40
@@ -123,81 +122,6 @@ object TGDiagnostics {
 		log(message + "\n" + android.util.Log.getStackTraceString(throwable))
 	}
 
-	// ---- frame counters: tell "nothing asks the window to draw" from "it draws but no frame is rendered"
-
-	@Volatile private var choreographerFrames = 0
-	@Volatile private var layouts = 0
-	@Volatile private var preDraws = 0
-	@Volatile private var draws = 0
-	@Volatile private var renderedFrames = 0
-	@Volatile private var frameWatchUntil = 0L
-	private var frameWatchInstalled = false
-
-	/** Counts, for a few seconds from now, Choreographer frames, layouts, draws and frames the renderer finished. */
-	@JvmStatic
-	fun watchFrames(activity: androidx.appcompat.app.AppCompatActivity) {
-		choreographerFrames = 0
-		layouts = 0
-		preDraws = 0
-		draws = 0
-		renderedFrames = 0
-		frameWatchUntil = SystemClock.uptimeMillis() + 6000
-		runCatching {
-			if (!frameWatchInstalled) {
-				frameWatchInstalled = true
-				val observer = activity.window.decorView.viewTreeObserver
-				observer.addOnGlobalLayoutListener { layouts++ }
-				observer.addOnPreDrawListener { preDraws++; true }
-				observer.addOnDrawListener { draws++ }
-				activity.window.addOnFrameMetricsAvailableListener({ _, _, _ -> renderedFrames++ }, Handler(Looper.getMainLooper()))
-			}
-			val callback = object : android.view.Choreographer.FrameCallback {
-				override fun doFrame(frameTimeNanos: Long) {
-					choreographerFrames++
-					if (SystemClock.uptimeMillis() < frameWatchUntil) {
-						android.view.Choreographer.getInstance().postFrameCallback(this)
-					}
-				}
-			}
-			android.view.Choreographer.getInstance().postFrameCallback(callback)
-		}.onFailure { log("frame watch failed", it) }
-	}
-
-	/** Writes the state of the screen to the log: window focus, action bar, side menu, fragments and the views. */
-	@JvmStatic
-	fun dumpState(activity: androidx.appcompat.app.AppCompatActivity, reason: String) {
-		runCatching {
-			val text = StringBuilder("STATE (").append(reason).append(")\n")
-			text.append("  since the screen change: choreographer frames=").append(choreographerFrames)
-				.append(" layouts=").append(layouts).append(" predraws=").append(preDraws)
-				.append(" draws=").append(draws).append(" rendered frames=").append(renderedFrames).append('\n')
-			val decor = activity.window.decorView
-			text.append("  decor dirty=").append(decor.isDirty).append(" layoutRequested=").append(decor.isLayoutRequested)
-				.append(" hardwareAccelerated=").append(decor.isHardwareAccelerated).append('\n')
-			text.append("  window focus=").append(activity.hasWindowFocus())
-				.append(" lifecycle=").append(activity.lifecycle.currentState)
-				.append(" actionBar showing=").append(activity.supportActionBar?.isShowing).append('\n')
-			(activity as? app.tuxguitar.android.activity.TGActivity)?.findContext()?.let { text.append("  ").append(lockInfo(it)).append('\n') }
-			val root = activity.findViewById<android.view.View>(app.tuxguitar.android.R.id.root_layout)
-			(root as? androidx.drawerlayout.widget.DrawerLayout)?.let {
-				text.append("  drawer open=").append(it.isDrawerOpen(androidx.core.view.GravityCompat.START))
-					.append(" visible=").append(it.isDrawerVisible(androidx.core.view.GravityCompat.START))
-					.append(" lock=").append(it.getDrawerLockMode(androidx.core.view.GravityCompat.START)).append('\n')
-			}
-			activity.supportFragmentManager.fragments.forEach { f ->
-				text.append("  fragment ").append(f.javaClass.simpleName)
-					.append(" added=").append(f.isAdded).append(" visible=").append(f.isVisible)
-					.append(" state=").append(f.lifecycle.currentState)
-					.append(" view=").append(if (f.view == null) "none" else if (f.view!!.isAttachedToWindow) "attached" else "detached")
-					.append('\n')
-			}
-			val lines = mutableListOf<String>()
-			dumpView(activity.window.decorView, 1, lines)
-			lines.take(DUMP_MAX_LINES).forEach { text.append(it).append('\n') }
-			log(text.toString())
-		}.onFailure { log("dump failed", it) }
-	}
-
 	/**
 	 * Who holds the editor lock (the actions that change the song or the screens take it) and what that thread is
 	 * doing: an action on the main thread waits for it, retrying, without blocking the thread.
@@ -218,31 +142,6 @@ object TGDiagnostics {
 			frames.take(25).forEach { text.append("      at ").append(it).append('\n') }
 		} ?: text.append(" (thread not alive)")
 		return text.toString()
-	}
-
-	private fun dumpView(view: android.view.View, depth: Int, lines: MutableList<String>) {
-		if (lines.size >= DUMP_MAX_LINES || depth > 14) {
-			return
-		}
-		val id = if (view.id != android.view.View.NO_ID) runCatching { view.resources.getResourceEntryName(view.id) }.getOrNull() else null
-		val visibility = when (view.visibility) {
-			android.view.View.VISIBLE -> "V"
-			android.view.View.INVISIBLE -> "I"
-			else -> "G"
-		}
-		val line = StringBuilder("  ".repeat(depth)).append(view.javaClass.simpleName)
-		if (id != null) line.append('#').append(id)
-		line.append(' ').append(visibility).append(' ').append(view.width).append('x').append(view.height)
-			.append(" @").append(view.left).append(',').append(view.top)
-		if (view.alpha < 1f) line.append(" alpha=").append(view.alpha)
-		if (view.translationY != 0f) line.append(" ty=").append(view.translationY)
-		if (view is androidx.compose.ui.platform.AbstractComposeView) line.append(" composed=").append(view.hasComposition)
-		lines.add(line.toString())
-		if (view is android.view.ViewGroup && view.visibility == android.view.View.VISIBLE) {
-			for (i in 0 until view.childCount) {
-				dumpView(view.getChildAt(i), depth + 1, lines)
-			}
-		}
 	}
 
 	private fun write(context: Context, title: String, throwable: Throwable?) {

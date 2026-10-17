@@ -500,24 +500,6 @@ public class TGActivity extends AppCompatActivity implements ActivityCompat.OnRe
 		}, true);
 	}
 
-	/** Writes the screen state to the debug log a little after a screen change, when a broken screen would show. */
-	public void dumpStateLater(final String reason) {
-		final View root = this.findViewById(R.id.root_layout);
-		if( root != null ) {
-			TGDiagnostics.watchFrames(this);
-			root.postDelayed(new Runnable() {
-				public void run() {
-					TGDiagnostics.dumpState(TGActivity.this, reason + ", after 1.5 s");
-				}
-			}, 1500);
-			root.postDelayed(new Runnable() {
-				public void run() {
-					TGDiagnostics.dumpState(TGActivity.this, reason + ", after 5 s");
-				}
-			}, 5000);
-		}
-	}
-
 	public void setDisplayOn(boolean displayOn) {
 		if (this.maintainDisplayON != displayOn) {
 			runOnUiThread(new Runnable() {

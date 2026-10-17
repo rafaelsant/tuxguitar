@@ -42,11 +42,6 @@ public class TGNavigationManager {
 	public void processLoadFragment(TGNavigationFragment nf) {
 		final String name = nf.getController().getClass().getSimpleName();
 		TGDiagnostics.log("load fragment " + name + " (history " + this.navigationFragments.size() + ")");
-		this.activity.runOnUiThread(new Runnable() {
-			public void run() {
-				TGNavigationManager.this.activity.dumpStateLater("load " + name);
-			}
-		});
 		// Screens are stacked: a new screen is added on top and the one below stays in the window, hidden; going back
 		// only removes the screens above. Replacing the main screen and attaching it again on the way back left the
 		// window frozen on the phone.
