@@ -21,6 +21,7 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - Barra flutuante de menu acima do player (`view/main/TGMainMenuBar.kt`): ☰ menu lateral, seletor de faixa, afinador, modo atual (menu com os nomes) e ⋮. Ela some enquanto a partitura rola e quando as opções de prática estão abertas.
 - Três modos (`view/practice/TGAppModeController.kt`): Play (padrão), Practice e Edit. Salvar, teclado de tablatura e menus de edição só no modo Edit.
 - Afinador (`fragment/impl/TGTunerFragment.kt`, detector YIN em `view/tuner/TGPitchDetector.java`): usa as cordas da faixa atual e toca a nota de referência.
+- Bateria MIDI (Yamaha DTX402 do usuário, pela porta USB TO HOST): entrada MIDI em `view/drums/TGMidiInput.kt` (API `android.media.midi`, sem permissão para USB), peças do kit e notas General MIDI em `view/drums/TGDrumKit.kt`. Tela "Drum kit (MIDI)" no menu lateral (`fragment/impl/TGDrumMonitorFragment.kt`): estado da conexão, pads que acendem a cada batida e lista das últimas notas.
 - Player num `BottomSheetScaffold` do Material 3 (`view/practice/TGBottomBars.kt`, `TGMainScreen`): recolhido mostra os botões; puxado para cima, as opções.
   - Play: play/stop, BPM, loop. Puxado até embaixo, o player some e fica só um botão flutuante de play (e um pequeno para trazê-lo de volta).
   - Practice: BPM com −5/+5 e % da velocidade original, voltar ao começo (do loop, ou de onde o play começou; tocando, segue na mesma velocidade), rampa de treino em BPM (de/até/incremento, contador de voltas), loop por compasso, metrônomo e count-in de 0, 1 ou 2 compassos (só no início, não a cada volta do loop).
@@ -45,6 +46,9 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - A verificar: issue aberta #1146 do upstream (repetições em modo loop).
 
 ## Próximos passos
+- Bateria MIDI, etapas seguintes:
+  - etapa 2: no modo Practice, com a faixa de bateria, casar cada batida com a nota esperada mais próxima da mesma peça (certa/adiantada/atrasada/errada, notas perdidas), cores nas notas e % de acerto por volta; calibrar a latência batendo junto com o metrônomo;
+  - etapa 3: a rampa do treino só sobe com acerto mínimo (ex.: 90%) na volta.
 - Afinador: validar no aparelho as cordas graves (Drop C, 7 cordas) sem salto de oitava.
 - Teclado de tablatura em Compose, se a edição pelo celular for muito usada.
 - Remover o código da action bar legada (`TGMainMenu`, `TGActivityActionBarController`) e dar ao navegador de arquivos opcional uma barra própria, ou removê-lo.

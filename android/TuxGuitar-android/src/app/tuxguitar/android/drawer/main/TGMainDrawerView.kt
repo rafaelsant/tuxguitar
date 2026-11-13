@@ -48,6 +48,7 @@ import app.tuxguitar.android.action.impl.track.TGGoToTrackAction
 import app.tuxguitar.android.activity.TGActivity
 import app.tuxguitar.android.application.TGApplicationUtil
 import app.tuxguitar.android.fragment.impl.TGChannelListFragmentController
+import app.tuxguitar.android.fragment.impl.openDrumMonitor
 import app.tuxguitar.android.fragment.impl.openTuner
 import app.tuxguitar.android.storage.recent.TGRecentFile
 import app.tuxguitar.android.storage.recent.TGRecentFiles
@@ -190,6 +191,10 @@ private fun MainDrawer(context: TGContext, activity: TGActivity) {
 			}) {
 				Icon(painterResource(R.drawable.ic_bar_mixer_24dp), contentDescription = null)
 				Text(stringResource(R.string.action_view_channel_list), modifier = Modifier.padding(start = 8.dp))
+			}
+			TextButton(onClick = { openDrumMonitor(context, activity) }) {
+				Icon(painterResource(R.drawable.ic_bar_drum_24dp), contentDescription = null)
+				Text(stringResource(R.string.drums_menu), modifier = Modifier.padding(start = 8.dp))
 			}
 			TextButton(onClick = {
 				run(

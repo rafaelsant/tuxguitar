@@ -4,4 +4,7 @@
 
 	<!-- tuner -->
 	<uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+	<!-- drum kit: MIDI drum modules on USB; the app also runs without MIDI -->
+	<uses-feature android:name="android.software.midi" android:required="false" />
 </manifest>
