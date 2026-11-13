@@ -10,6 +10,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -140,46 +146,56 @@ class TGDrumMonitorFragment : Fragment() {
 
 	@Composable
 	private fun DrumScreen() {
-		Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-			StatusCard()
+		// one list, so a short or landscape screen scrolls instead of squeezing the hits out
+		LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
+			item(key = "status") { StatusCard() }
 			// laid out like a kit seen from the stool: cymbals, toms, then snare and kick
-			Column(
-				verticalArrangement = Arrangement.spacedBy(PAD_SPACING),
-				modifier = Modifier.padding(top = 16.dp),
-			) {
-				PadRow(TGDrumPiece.HI_HAT, TGDrumPiece.CRASH, TGDrumPiece.RIDE)
-				PadRow(TGDrumPiece.TOM_1, TGDrumPiece.TOM_2, TGDrumPiece.FLOOR_TOM)
-				PadRow(TGDrumPiece.SNARE, TGDrumPiece.KICK)
+			item(key = "pads") {
+				Column(
+					verticalArrangement = Arrangement.spacedBy(PAD_SPACING),
+					modifier = Modifier.padding(top = 16.dp),
+				) {
+					PadRow(TGDrumPiece.HI_HAT, TGDrumPiece.CRASH, TGDrumPiece.RIDE)
+					PadRow(TGDrumPiece.TOM_1, TGDrumPiece.TOM_2, TGDrumPiece.FLOOR_TOM)
+					PadRow(TGDrumPiece.SNARE, TGDrumPiece.KICK)
+				}
 			}
-			Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp)) {
-				Text(
-					stringResource(R.string.drums_last_hits),
-					style = MaterialTheme.typography.titleMedium,
-					fontWeight = FontWeight.Bold,
-					modifier = Modifier.weight(1f),
-				)
-				TextButton(onClick = { hits.clear() }, enabled = hits.isNotEmpty()) {
-					Text(stringResource(R.string.drums_clear))
+			item(key = "header") {
+				Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp)) {
+					Text(
+						stringResource(R.string.drums_last_hits),
+						style = MaterialTheme.typography.titleMedium,
+						fontWeight = FontWeight.Bold,
+						modifier = Modifier.weight(1f),
+					)
+					TextButton(
+						onClick = {
+							hits.clear()
+							padHits.clear()
+						},
+						enabled = hits.isNotEmpty(),
+					) {
+						Text(stringResource(R.string.drums_clear))
+					}
 				}
 			}
 			if (hits.isEmpty()) {
-				Text(
-					stringResource(R.string.drums_hint),
-					style = MaterialTheme.typography.bodyMedium,
-					color = MaterialTheme.colorScheme.onSurfaceVariant,
-					modifier = Modifier.padding(top = 8.dp),
-				)
+				item(key = "hint") {
+					Text(
+						stringResource(R.string.drums_hint),
+						style = MaterialTheme.typography.bodyMedium,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = Modifier.padding(top = 8.dp),
+					)
+				}
 			}
-			LazyColumn(modifier = Modifier.weight(1f)) {
-				items(hits, key = { it.id }) { HitRow(it) }
-			}
+			items(hits, key = { it.id }) { HitRow(it) }
 		}
 	}
 
 	@Composable
 	private fun StatusCard() {
 		val status = status
-		val connected = status is TGMidiStatus.Connected
 		val text = when (status) {
 			null, TGMidiStatus.NoDevice -> stringResource(R.string.drums_no_device)
 			TGMidiStatus.NotSupported -> stringResource(R.string.drums_not_supported)
@@ -188,17 +204,26 @@ class TGDrumMonitorFragment : Fragment() {
 			is TGMidiStatus.Failed -> stringResource(R.string.drums_open_failed, status.name)
 		}
 		val colors = MaterialTheme.colorScheme
-		Surface(
-			shape = RoundedCornerShape(16.dp),
-			color = if (connected) colors.primaryContainer else colors.surfaceContainerHigh,
-			contentColor = if (connected) colors.onPrimaryContainer else colors.onSurface,
-			modifier = Modifier.fillMaxWidth(),
-		) {
-			Text(
-				(if (connected) "✓ " else "") + text,
-				style = MaterialTheme.typography.bodyLarge,
-				modifier = Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite },
-			)
+		val (background, content) = when (status) {
+			is TGMidiStatus.Connected -> colors.primaryContainer to colors.onPrimaryContainer
+			is TGMidiStatus.Failed, TGMidiStatus.NotSupported -> colors.errorContainer to colors.onErrorContainer
+			else -> colors.surfaceContainerHigh to colors.onSurface
+		}
+		Surface(shape = RoundedCornerShape(16.dp), color = background, contentColor = content, modifier = Modifier.fillMaxWidth()) {
+			Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+				if (status is TGMidiStatus.Connected) {
+					Icon(
+						painterResource(R.drawable.ic_bar_check_24dp),
+						contentDescription = null,
+						modifier = Modifier.padding(end = 12.dp).size(24.dp),
+					)
+				}
+				Text(
+					text,
+					style = MaterialTheme.typography.bodyLarge,
+					modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+				)
+			}
 		}
 	}
 
@@ -218,11 +243,14 @@ class TGDrumMonitorFragment : Fragment() {
 			if (count > 0) {
 				flash.snapTo(0.35f + 0.65f * velocity / 127f)
 				flash.animateTo(0f, tween(FLASH_MILLIS))
+			} else {
+				flash.snapTo(0f)
 			}
 		}
 		val colors = MaterialTheme.colorScheme
 		val background = lerp(colors.surfaceContainerHigh, colors.primary, flash.value)
-		val content = if (flash.value > 0.5f) colors.onPrimary else colors.onSurface
+		// the text follows the background as it fades, readable in both themes
+		val content = if (background.luminance() > 0.4f) Color.Black.copy(alpha = 0.87f) else Color.White
 		Surface(
 			shape = RoundedCornerShape(16.dp),
 			color = background,
@@ -236,15 +264,16 @@ class TGDrumMonitorFragment : Fragment() {
 			) {
 				Text(
 					stringResource(piece.label),
-					style = MaterialTheme.typography.titleSmall,
+					style = MaterialTheme.typography.titleMedium,
 					fontWeight = FontWeight.Bold,
 					textAlign = TextAlign.Center,
-					maxLines = 1,
+					maxLines = 2,
 					overflow = TextOverflow.Ellipsis,
 				)
+				// the velocity of the last hit, as a number: large enough to read from the stool
 				Text(
-					if (count > 0) stringResource(R.string.drums_velocity, velocity) else " ",
-					style = MaterialTheme.typography.bodySmall,
+					if (count > 0) velocity.toString() else " ",
+					style = MaterialTheme.typography.titleLarge,
 					maxLines = 1,
 				)
 			}
@@ -255,12 +284,20 @@ class TGDrumMonitorFragment : Fragment() {
 	private fun HitRow(item: ListedHit) {
 		val hit = item.hit
 		val piece = TGDrumPiece.of(hit.note)
+		// the General MIDI name tells what the pad sends, so it comes first
+		val name = TGDrumKit.noteName(hit.note)
 		Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
 			Row(verticalAlignment = Alignment.CenterVertically) {
 				Text(
 					piece?.let { stringResource(it.label) } ?: stringResource(R.string.drums_other),
 					style = MaterialTheme.typography.bodyLarge,
 					fontWeight = FontWeight.Bold,
+				)
+				Text(
+					name?.let { " · $it" } ?: "",
+					style = MaterialTheme.typography.bodyLarge,
+					maxLines = 1,
+					overflow = TextOverflow.Ellipsis,
 					modifier = Modifier.weight(1f),
 				)
 				item.interval?.let {
@@ -268,23 +305,25 @@ class TGDrumMonitorFragment : Fragment() {
 						stringResource(R.string.drums_interval, it),
 						style = MaterialTheme.typography.bodyMedium,
 						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						modifier = Modifier.padding(start = 8.dp),
 					)
 				}
 			}
-			// the note number and its General MIDI name, to check what each pad sends
-			val name = TGDrumKit.noteName(hit.note)
+			// drum modules send on channel 10: another one is worth seeing
+			val detail = stringResource(R.string.drums_hit_detail, hit.note, hit.velocity) +
+				(if (hit.channel != DRUM_CHANNEL) " · " + stringResource(R.string.drums_channel, hit.channel + 1) else "")
 			Text(
-				stringResource(R.string.drums_hit_detail, hit.note, hit.velocity, hit.channel + 1) + (name?.let { " · $it" } ?: ""),
+				detail,
 				style = MaterialTheme.typography.bodyMedium,
 				color = MaterialTheme.colorScheme.onSurfaceVariant,
-				maxLines = 1,
-				overflow = TextOverflow.Ellipsis,
 			)
 		}
 		HorizontalDivider()
 	}
 }
 
-private val PAD_HEIGHT = 72.dp
+private val PAD_HEIGHT = 88.dp
 private val PAD_SPACING = 10.dp
 private const val FLASH_MILLIS = 350
+// channel 10, counted from 0
+private const val DRUM_CHANNEL = 9

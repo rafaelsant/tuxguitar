@@ -194,8 +194,8 @@
 	<string name="drums_hint">Hit the pads: each one should light up the right piece. The notes it sends are listed here.</string>
 	<string name="drums_last_hits">Last hits</string>
 	<string name="drums_clear">Clear</string>
-	<string name="drums_velocity">Velocity %1$d</string>
-	<string name="drums_hit_detail">Note %1$d · velocity %2$d · channel %3$d</string>
+	<string name="drums_hit_detail">Note %1$d · velocity %2$d</string>
+	<string name="drums_channel">channel %1$d</string>
 	<string name="drums_interval">+%1$d ms</string>
 	<string name="drums_other">Other</string>
 	<string name="drums_hihat">Hi-hat</string>
