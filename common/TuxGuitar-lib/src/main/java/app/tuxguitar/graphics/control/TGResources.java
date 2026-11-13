@@ -1,8 +1,10 @@
 package app.tuxguitar.graphics.control;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import app.tuxguitar.ui.resource.UIColor;
 import app.tuxguitar.ui.resource.UIColorModel;
@@ -15,6 +17,7 @@ import app.tuxguitar.ui.resource.UIResourceFactory;
 public class TGResources {
 
 	private List<UIResource> resources;
+	private Map<Integer, UIColor> highlightColors;
 	private TGLayout layout;
 
 	private UIFont defaultFont;
@@ -43,6 +46,7 @@ public class TGResources {
 	public TGResources(TGLayout layout){
 		this.layout = layout;
 		this.resources = new ArrayList<UIResource>();
+		this.highlightColors = new HashMap<Integer, UIColor>();
 	}
 
 	public void load(TGLayoutStyles styles){
@@ -175,6 +179,17 @@ public class TGResources {
 		this.colorBlack = getColor(new UIColorModel(0x00,0x00,0x00));
 	}
 
+	/** Color of a highlighted note (see TGNoteHighlighter), created once per color. */
+	public UIColor getHighlightColor(UIColorModel model){
+		Integer key = Integer.valueOf((model.getRed() << 16) | (model.getGreen() << 8) | model.getBlue());
+		UIColor color = this.highlightColors.get(key);
+		if( color == null ){
+			color = getColor(model);
+			this.highlightColors.put(key, color);
+		}
+		return color;
+	}
+
 	private UIFont getFont(UIFontModel model, float scale){
 		UIResourceFactory factory = getLayout().getComponent().getResourceFactory();
 		UIFontModel fm = new UIFontModel();
@@ -215,5 +230,6 @@ public class TGResources {
 			resource.dispose();
 		}
 		this.resources.clear();
+		this.highlightColors.clear();
 	}
 }

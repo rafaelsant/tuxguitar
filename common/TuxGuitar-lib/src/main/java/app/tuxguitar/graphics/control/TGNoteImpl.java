@@ -147,6 +147,7 @@ public class TGNoteImpl extends TGNote {
 
 		this.fillBackground(layout, painter, margin, fromX, fromY);
 		layout.setTabNotePathStyle(painter, running);
+		layout.setNoteHighlightStyle(painter, this);
 		if( this.getEffect().isDeadNote() ) {
 			painter.initPath(UIPainter.PATH_DRAW);
 			painter.moveTo(fromX - (margin.getLeft() - ghostWidth), fromY - margin.getTop());
@@ -198,6 +199,7 @@ public class TGNoteImpl extends TGNote {
 
 		this.fillBackground(layout, painter, margin, fromX, fromY);
 		layout.setTabNoteFontStyle(painter, running);
+		layout.setNoteHighlightStyle(painter, this);
 		painter.drawString(label, fromX - margin.getLeft(), fromY + fmMiddleLine);
 	}
 
@@ -327,6 +329,7 @@ public class TGNoteImpl extends TGNote {
 			}
 
 			layout.setScoreNoteStyle(painter,playing);
+			layout.setNoteHighlightStyle(painter, this);
 
 			//----------sostenido--------------------------------------
 			if((this.accidental == TGMusicKeyUtils.NATURAL) && !this.getEffect().isDeadNote()){

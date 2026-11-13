@@ -12,8 +12,10 @@ import app.tuxguitar.song.managers.TGSongManager;
 import app.tuxguitar.song.models.TGDuration;
 import app.tuxguitar.song.models.TGMeasure;
 import app.tuxguitar.song.models.TGMeasureHeader;
+import app.tuxguitar.song.models.TGNote;
 import app.tuxguitar.song.models.TGSong;
 import app.tuxguitar.ui.resource.UIColor;
+import app.tuxguitar.ui.resource.UIColorModel;
 import app.tuxguitar.ui.resource.UIPainter;
 import app.tuxguitar.ui.resource.UIRectangle;
 
@@ -71,6 +73,7 @@ public abstract class TGLayout {
 	private float[] lineWidths;
 	private float[] durationWidths;
 	private boolean bufferEnabled;
+	private TGNoteHighlighter noteHighlighter;
 	private boolean playModeEnabled;
 	private boolean tabNotePathRendererEnabled;
 
@@ -472,6 +475,24 @@ public abstract class TGLayout {
 	public void setTabSilenceStyle(UIPainter painter,boolean playMode){
 		painter.setForeground( (playMode ? getResources().getPlayNoteColor() : getDarkColor(getResources().getTabNoteColor()) ));
 		painter.setBackground( (playMode ? getResources().getPlayNoteColor() : getDarkColor(getResources().getTabNoteColor()) ));
+	}
+
+	public TGNoteHighlighter getNoteHighlighter() {
+		return this.noteHighlighter;
+	}
+
+	public void setNoteHighlighter(TGNoteHighlighter noteHighlighter) {
+		this.noteHighlighter = noteHighlighter;
+	}
+
+	/** Paints the note in its highlight color, if the highlighter gives it one. */
+	public void setNoteHighlightStyle(UIPainter painter, TGNote note){
+		UIColorModel model = (this.noteHighlighter != null ? this.noteHighlighter.getHighlightColor(note) : null);
+		if( model != null ){
+			UIColor color = getResources().getHighlightColor(model);
+			painter.setForeground(color);
+			painter.setBackground(color);
+		}
 	}
 
 	public void setScoreNoteStyle(UIPainter painter,boolean playing){

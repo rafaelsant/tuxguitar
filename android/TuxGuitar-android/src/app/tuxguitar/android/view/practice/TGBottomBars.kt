@@ -19,6 +19,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import app.tuxguitar.android.view.drums.TGDrumGrader
 import app.tuxguitar.android.view.main.TGMainMenuBarContent
 import app.tuxguitar.android.view.main.TGScoreScrollState
 import app.tuxguitar.android.view.tablature.TGSongView
@@ -160,6 +164,31 @@ private fun MainScreen(context: TGContext, session: TGPracticeSession, modeContr
 		if (mode == TGAppMode.PRACTICE) session.apply() else player.applyPlay(playLoop)
 	}
 
+	// drum grading (MIDI drum kit): connected while practicing with it on and the app is shown
+	val drums = remember { TGDrumGrader.getInstance(context).also { it.restore() } }
+	val lifecycleOwner = LocalLifecycleOwner.current
+	DisposableEffect(mode, drums.enabled, lifecycleOwner) {
+		// added to a started lifecycle, the observer gets ON_START right away
+		val observer = LifecycleEventObserver { _, event ->
+			when (event) {
+				Lifecycle.Event.ON_START -> if (mode == TGAppMode.PRACTICE) drums.start(androidContext)
+				Lifecycle.Event.ON_STOP -> drums.stop()
+				else -> Unit
+			}
+		}
+		lifecycleOwner.lifecycle.addObserver(observer)
+		onDispose {
+			lifecycleOwner.lifecycle.removeObserver(observer)
+			drums.stop()
+		}
+	}
+	LaunchedEffect(mode, drums.enabled) {
+		while (mode == TGAppMode.PRACTICE && drums.enabled) {
+			drums.tick()
+			delay(100)
+		}
+	}
+
 	// the player has no listener for these values, so poll them while the player is shown
 	LaunchedEffect(mode) {
 		while (mode != TGAppMode.EDIT) {
@@ -235,6 +264,7 @@ private fun MainScreen(context: TGContext, session: TGPracticeSession, modeContr
 						onPlayPause = { player.playPause(settings) },
 						onRestart = { player.restart(settings) },
 						onMetronome = { player.toggleMetronome() },
+						drums = drums,
 					)
 					TGAppMode.EDIT -> Unit
 				}
@@ -339,6 +369,7 @@ private fun PracticeBar(
 	onPlayPause: () -> Unit,
 	onRestart: () -> Unit,
 	onMetronome: () -> Unit,
+	drums: TGDrumGrader,
 ) {
 	val expanded = sheet.expanded
 	val base = snapshot.baseTempo
@@ -346,6 +377,9 @@ private fun PracticeBar(
 	Column(modifier = Modifier.padding(horizontal = 16.dp)) {
 		// the tiles: what the collapsed sheet shows
 		Column(modifier = Modifier.onSizeChanged { onTilesHeight(it.height) }.padding(bottom = 12.dp)) {
+			if (drums.enabled) {
+				TGDrumHeader(drums)
+			}
 			if (settings.training) {
 				val step = trainingStep(settings, if (snapshot.running) snapshot.currentPercent else settings.fromPercent)
 				Row(verticalAlignment = Alignment.CenterVertically) {
@@ -458,7 +492,7 @@ private fun PracticeBar(
 		}
 
 		// dragged up: the options
-		PracticeOptions(snapshot, settings, onSettingsChange)
+		PracticeOptions(snapshot, settings, onSettingsChange, drums)
 	}
 }
 
@@ -477,6 +511,7 @@ private fun PracticeOptions(
 	snapshot: TGPlayerSnapshot,
 	settings: TGPracticeSettings,
 	onSettingsChange: (TGPracticeSettings) -> Unit,
+	drums: TGDrumGrader,
 ) {
 	val base = snapshot.baseTempo
 	val minBpm = TGTempoMath.bpm(base, TGPracticePlayer.MIN_PERCENT).coerceAtLeast(1)
@@ -594,6 +629,9 @@ private fun PracticeOptions(
 				hint = null,
 			)
 		}
+
+		// ---- drums
+		TGDrumOptions(drums)
 	}
 }
 

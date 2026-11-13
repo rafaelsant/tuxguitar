@@ -22,6 +22,7 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 - Três modos (`view/practice/TGAppModeController.kt`): Play (padrão), Practice e Edit. Salvar, teclado de tablatura e menus de edição só no modo Edit.
 - Afinador (`fragment/impl/TGTunerFragment.kt`, detector YIN em `view/tuner/TGPitchDetector.java`): usa as cordas da faixa atual e toca a nota de referência.
 - Bateria MIDI (Yamaha DTX402 do usuário, pela porta USB TO HOST): entrada MIDI em `view/drums/TGMidiInput.kt` (API `android.media.midi`, sem permissão para USB), peças do kit e notas General MIDI em `view/drums/TGDrumKit.kt`. Tela "Drum kit (MIDI)" no menu lateral (`fragment/impl/TGDrumMonitorFragment.kt`): estado da conexão, pads que acendem a cada batida e lista das últimas notas.
+  - Correção em tempo real no modo Practice (`view/drums/TGDrumGrader.kt`, UI em `view/practice/TGDrumPracticeUi.kt`, ligada em "Drums (MIDI)" nas opções de prática): cada batida é casada com a nota mais próxima da mesma peça na faixa de bateria (no tempo ≤ 45 ms, adiantada/atrasada ≤ 130 ms, senão batida a mais; notas que passaram sem batida = perdidas). As notas ficam verdes/amarelas/vermelhas na partitura via `TGNoteHighlighter` (gancho novo em `common/TuxGuitar-lib`, `TGLayout.setNoteHighlightStyle`), e cada volta do loop tem um %. Latência do áudio em ms, calibrada pela mediana dos erros da última volta.
 - Player num `BottomSheetScaffold` do Material 3 (`view/practice/TGBottomBars.kt`, `TGMainScreen`): recolhido mostra os botões; puxado para cima, as opções.
   - Play: play/stop, BPM, loop. Puxado até embaixo, o player some e fica só um botão flutuante de play (e um pequeno para trazê-lo de volta).
   - Practice: BPM com −5/+5 e % da velocidade original, voltar ao começo (do loop, ou de onde o play começou; tocando, segue na mesma velocidade), rampa de treino em BPM (de/até/incremento, contador de voltas), loop por compasso, metrônomo e count-in de 0, 1 ou 2 compassos (só no início, não a cada volta do loop).
@@ -47,7 +48,7 @@ Branch de trabalho: `android-apk` (cada push gera o APK debug). UI em Jetpack Co
 
 ## Próximos passos
 - Bateria MIDI, etapas seguintes:
-  - etapa 2: no modo Practice, com a faixa de bateria, casar cada batida com a nota esperada mais próxima da mesma peça (certa/adiantada/atrasada/errada, notas perdidas), cores nas notas e % de acerto por volta; calibrar a latência batendo junto com o metrônomo;
+  - etapa 2 (feita, a validar no aparelho): ajustar janelas de tempo e a calibração com o uso; repetições (sinais de repetição) dentro do loop contam como uma nova volta;
   - etapa 3: a rampa do treino só sobe com acerto mínimo (ex.: 90%) na volta.
 - Afinador: validar no aparelho as cordas graves (Drop C, 7 cordas) sem salto de oitava.
 - Teclado de tablatura em Compose, se a edição pelo celular for muito usada.

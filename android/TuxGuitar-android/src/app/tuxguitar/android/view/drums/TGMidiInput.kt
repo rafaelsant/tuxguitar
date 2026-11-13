@@ -19,6 +19,8 @@ sealed class TGMidiStatus {
 	/** The phone has no MIDI support. */
 	object NotSupported : TGMidiStatus()
 	object NoDevice : TGMidiStatus()
+	/** The device in use was unplugged (or turned off), and no other is there. */
+	data class Disconnected(val name: String) : TGMidiStatus()
 	data class Connecting(val name: String) : TGMidiStatus()
 	data class Connected(val name: String) : TGMidiStatus()
 	data class Failed(val name: String) : TGMidiStatus()
@@ -59,7 +61,7 @@ class TGMidiInput(
 			if (running && info.id == deviceInfo?.id) {
 				TGDiagnostics.log("midi: device removed: " + nameOf(info))
 				close()
-				openFirst()
+				openFirst(removed = nameOf(info))
 			}
 		}
 	}
@@ -90,7 +92,7 @@ class TGMidiInput(
 	}
 
 	@Suppress("DEPRECATION")
-	private fun openFirst() {
+	private fun openFirst(removed: String? = null) {
 		val devices = manager?.devices.orEmpty().filter { it.outputPortCount > 0 }
 		// a module on a cable first, then Bluetooth, then apps that offer MIDI
 		val info = devices.minByOrNull {
@@ -101,7 +103,7 @@ class TGMidiInput(
 			}
 		}
 		if (info == null) {
-			onStatus(TGMidiStatus.NoDevice)
+			onStatus(if (removed != null) TGMidiStatus.Disconnected(removed) else TGMidiStatus.NoDevice)
 		} else {
 			open(info)
 		}

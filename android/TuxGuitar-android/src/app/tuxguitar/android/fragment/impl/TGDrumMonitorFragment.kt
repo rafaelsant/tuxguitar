@@ -198,6 +198,7 @@ class TGDrumMonitorFragment : Fragment() {
 		val status = status
 		val text = when (status) {
 			null, TGMidiStatus.NoDevice -> stringResource(R.string.drums_no_device)
+			is TGMidiStatus.Disconnected -> stringResource(R.string.drums_disconnected, status.name)
 			TGMidiStatus.NotSupported -> stringResource(R.string.drums_not_supported)
 			is TGMidiStatus.Connecting -> stringResource(R.string.drums_connecting, status.name)
 			is TGMidiStatus.Connected -> stringResource(R.string.drums_connected, status.name)
