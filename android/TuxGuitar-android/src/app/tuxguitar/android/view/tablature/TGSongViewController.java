@@ -154,7 +154,7 @@ public class TGSongViewController implements TGController {
 	}
 
 	/** Follows the system dark mode; the activity does not restart on change (uiMode in configChanges), so it applies on next launch. */
-	private static boolean isDarkMode() {
+	public static boolean isDarkMode() {
 		int nightMode = Resources.getSystem().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
 		return (nightMode == Configuration.UI_MODE_NIGHT_YES);
 	}

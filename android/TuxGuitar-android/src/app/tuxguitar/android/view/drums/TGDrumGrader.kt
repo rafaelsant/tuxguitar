@@ -65,13 +65,16 @@ class TGDrumGrader(private val context: TGContext) : TGNoteHighlighter {
 		const val WINDOW_MILLIS = 130
 		/** Hits this far from their note are still used to measure the latency. */
 		private const val CALIBRATION_WINDOW_MILLIS = 350
-		private const val MIN_CALIBRATION_HITS = 8
+		const val MIN_CALIBRATION_HITS = 8
 		const val MAX_LATENCY_MILLIS = 500
 		private const val PREFS = "drums"
 
-		private val GREEN = UIColorModel(0x2E, 0xA0, 0x43)
-		private val YELLOW = UIColorModel(0xE0, 0x9A, 0x00)
-		private val RED = UIColorModel(0xD3, 0x2F, 0x2F)
+		/** Colors of on time, early or late, and missed, readable on the score background of each theme. */
+		@JvmStatic
+		fun gradeColors(dark: Boolean): Triple<Int, Int, Int> =
+			if (dark) Triple(0x3FB950, 0xFFB300, 0xEF5350) else Triple(0x1A7F37, 0xB86E00, 0xC62828)
+
+		private fun model(rgb: Int) = UIColorModel((rgb shr 16) and 0xFF, (rgb shr 8) and 0xFF, rgb and 0xFF)
 
 		@JvmStatic
 		fun getInstance(context: TGContext): TGDrumGrader =
@@ -375,10 +378,15 @@ class TGDrumGrader(private val context: TGContext) : TGNoteHighlighter {
 		return result
 	}
 
+	// the score follows the system theme when the app starts
+	private val colors = gradeColors(TGSongViewController.isDarkMode()).let { (green, amber, red) ->
+		Triple(model(green), model(amber), model(red))
+	}
+
 	override fun getHighlightColor(note: TGNote): UIColorModel? = when (grades[note]) {
-		TGDrumGrade.ON_TIME -> GREEN
-		TGDrumGrade.EARLY, TGDrumGrade.LATE -> YELLOW
-		TGDrumGrade.MISSED -> RED
+		TGDrumGrade.ON_TIME -> colors.first
+		TGDrumGrade.EARLY, TGDrumGrade.LATE -> colors.second
+		TGDrumGrade.MISSED -> colors.third
 		null -> null
 	}
 }

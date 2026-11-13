@@ -61,7 +61,8 @@ public class TGSongViewStyles extends TGLayoutStyles {
 			this.setLineColorInvalid( new UIColorModel(205,0,0 ));
 			this.setScoreNoteColor( new UIColorModel(105, 105, 105 ) );
 			this.setTabNoteColor( new UIColorModel(105, 105, 105 ) );
-			this.setPlayNoteColor( new UIColorModel(255, 0, 0 ) );
+			// the playing notes in the app accent: red is for missed notes (drum grading)
+			this.setPlayNoteColor( new UIColorModel(0, 121, 107 ) );
 			this.setLoopSMarkerColor( new UIColorModel(0, 0, 0 ) );
 			this.setLoopEMarkerColor( new UIColorModel(0, 0, 0 ) );
 			this.setMeasureNumberColor( new UIColorModel(255, 0, 0 ) );
@@ -75,7 +76,7 @@ public class TGSongViewStyles extends TGLayoutStyles {
 		this.setLineColorInvalid( new UIColorModel(239, 83, 80 ));
 		this.setScoreNoteColor( new UIColorModel(225, 225, 225 ) );
 		this.setTabNoteColor( new UIColorModel(225, 225, 225 ) );
-		this.setPlayNoteColor( new UIColorModel(255, 138, 101 ) );
+		this.setPlayNoteColor( new UIColorModel(77, 182, 172 ) );
 		this.setLoopSMarkerColor( new UIColorModel(230, 230, 230 ) );
 		this.setLoopEMarkerColor( new UIColorModel(230, 230, 230 ) );
 		this.setMeasureNumberColor( new UIColorModel(77, 182, 172 ) );
